@@ -1,0 +1,2 @@
+import { Header } from "@/components/layout/header";
+export default function ReturnsPage() { return <main className="min-h-screen bg-[#f9fcff] px-6 pb-20 pt-36 sm:px-10"><Header /><div className="mx-auto max-w-3xl"><h1 className="text-5xl font-medium">Returns &amp; refunds</h1><div className="glass-panel mt-10 rounded-2xl p-8 text-[#334f6d]"><p>Return conditions and refund steps will be configured from the final Baby Secret policy.</p></div></div></main>; }

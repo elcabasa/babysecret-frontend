@@ -1,0 +1,3 @@
+import Link from "next/link";
+import { Header } from "@/components/layout/header";
+export default function AccountPage() { return <main className="min-h-screen bg-[#f9fcff] px-6 pb-20 pt-36 sm:px-10"><Header /><div className="mx-auto max-w-3xl"><p className="text-xs font-bold uppercase tracking-wide text-[#3051a0]">Customer space</p><h1 className="mt-4 text-5xl font-medium">My account</h1><div className="glass-panel mt-10 rounded-2xl p-8"><p className="text-[#334f6d]">Account sign-in will connect to WooCommerce customer accounts in the next integration phase.</p><Link href="/contact" className="mt-6 inline-block rounded-full bg-[#005dbd] px-7 py-3 font-semibold text-white">Contact support</Link></div></div></main>; }

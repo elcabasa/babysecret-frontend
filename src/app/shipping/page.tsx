@@ -1,0 +1,2 @@
+import { Header } from "@/components/layout/header";
+export default function ShippingPage() { return <main className="min-h-screen bg-[#f9fcff] px-6 pb-20 pt-36 sm:px-10"><Header /><div className="mx-auto max-w-3xl"><h1 className="text-5xl font-medium">Delivery</h1><div className="glass-panel mt-10 rounded-2xl p-8 text-[#334f6d]"><p>Delivery options and timelines will be configured from the final Baby Secret shipping policy.</p></div></div></main>; }
