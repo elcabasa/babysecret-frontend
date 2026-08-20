@@ -1,0 +1,11 @@
+"use client";
+
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const schema = z.object({ name: z.string().min(2, "Please enter your name"), email: z.string().email("Enter a valid email"), subject: z.string().optional(), message: z.string().min(10, "Please tell us a little more") });
+type ContactValues = z.infer<typeof schema>;
+
+export function ContactForm() { const [sent, setSent] = useState(false); const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ContactValues>({ resolver: zodResolver(schema) }); const onSubmit = async () => { await new Promise((resolve) => setTimeout(resolve, 500)); setSent(true); }; if (sent) return <div className="glass-panel mt-10 rounded-2xl p-8"><h2 className="text-xl font-semibold">Thank you for reaching out.</h2><p className="mt-2 text-[#334f6d]">Your message has been prepared for the Baby Secret team. We&apos;ll be in touch using the details you provided.</p></div>; return <form onSubmit={handleSubmit(onSubmit)} className="glass-panel mt-10 grid gap-5 rounded-2xl p-6 sm:grid-cols-2 sm:p-8"><label className="grid gap-2 text-sm">Name<input {...register("name")} className="glass-control rounded-xl px-4 py-3 outline-none" />{errors.name && <span className="text-xs text-red-600">{errors.name.message}</span>}</label><label className="grid gap-2 text-sm">Email<input {...register("email")} type="email" className="glass-control rounded-xl px-4 py-3 outline-none" />{errors.email && <span className="text-xs text-red-600">{errors.email.message}</span>}</label><label className="grid gap-2 text-sm sm:col-span-2">Subject<input {...register("subject")} className="glass-control rounded-xl px-4 py-3 outline-none" /></label><label className="grid gap-2 text-sm sm:col-span-2">Message<textarea {...register("message")} rows={6} className="glass-control rounded-xl px-4 py-3 outline-none" />{errors.message && <span className="text-xs text-red-600">{errors.message.message}</span>}</label><button disabled={isSubmitting} className="rounded-full bg-[#005dbd] px-6 py-3 font-semibold text-white disabled:opacity-60 sm:col-span-2 sm:justify-self-start">{isSubmitting ? "Preparing…" : "Send message"}</button></form>; }
