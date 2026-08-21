@@ -35,3 +35,18 @@ export async function getFeaturedProducts(): Promise<Product[]> {
     return featuredProducts;
   }
 }
+
+export async function searchProducts(query: string): Promise<Product[]> {
+  const normalizedQuery = query.trim();
+  if (!normalizedQuery) return [];
+
+  try {
+    const response = await fetch(`${storeApiUrl}/products?per_page=24&search=${encodeURIComponent(normalizedQuery)}`, { next: { revalidate: 60 } });
+    if (!response.ok) throw new Error(`WooCommerce returned ${response.status}`);
+    const products = (await response.json()) as WooProduct[];
+    return products.map(mapWooProduct);
+  } catch {
+    const needle = normalizedQuery.toLowerCase();
+    return featuredProducts.filter((product) => [product.name, product.category, product.description].some((value) => value.toLowerCase().includes(needle)));
+  }
+}
