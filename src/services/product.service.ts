@@ -10,7 +10,7 @@ type WooProduct = {
   description?: string;
   prices: { price: string; regular_price?: string; sale_price?: string; currency_code?: string; currency_minor_unit: number };
   images?: { src: string }[];
-  categories?: { name: string }[];
+  categories?: { id?: number; name: string; slug?: string }[];
   short_description?: string;
   is_in_stock?: boolean;
   is_purchasable?: boolean;
@@ -18,7 +18,7 @@ type WooProduct = {
 
 const storeApiUrl = process.env.NEXT_PUBLIC_WOOCOMMERCE_STORE_API_URL ?? "https://babysecret.com/wp-json/wc/store/v1";
 
-function mapCategory(name?: string): ProductCategory {
+function mapCategory(name?: string): string {
   const value = name?.toLowerCase() ?? "";
   if (value.includes("bath") || value.includes("shower") || value.includes("soap")) return "Bath & Wash";
   if (value.includes("wipe")) return "Hygiene";
@@ -33,12 +33,17 @@ function mapWooProduct(product: WooProduct): Product {
 }
 
 type ProductQuery = { page?: number; perPage?: number; category?: string; search?: string; order?: "asc" | "desc"; orderby?: "date" | "price" | "popularity" };
+export interface ProductListResponse { products: Product[]; page: number; totalPages: number; totalProducts: number; }
 
 export function categorySlug(category: string) {
   return category.toLowerCase().replace(/\s*&\s*/g, "-and-").replace(/\s+/g, "-");
 }
 
 export async function getProducts(query: ProductQuery = {}): Promise<Product[]> {
+  return (await getProductList(query)).products;
+}
+
+export async function getProductList(query: ProductQuery = {}): Promise<ProductListResponse> {
   const params = new URLSearchParams({ page: String(query.page ?? 1), per_page: String(query.perPage ?? 24), order: query.order ?? "desc", orderby: query.orderby ?? "date" });
   if (query.search) params.set("search", query.search);
   try {
@@ -46,13 +51,15 @@ export async function getProducts(query: ProductQuery = {}): Promise<Product[]> 
     if (!response.ok) throw new Error(`WooCommerce returned ${response.status}`);
     const products = (await response.json()) as WooProduct[];
     const mapped = products.map(mapWooProduct);
-    return query.category ? mapped.filter((product) => categorySlug(product.category) === query.category) : mapped;
+    const filteredProducts = query.category ? mapped.filter((product) => categorySlug(product.category) === query.category) : mapped;
+    return { products: filteredProducts, page: query.page ?? 1, totalPages: Number(response.headers.get("X-WP-TotalPages") ?? 1), totalProducts: Number(response.headers.get("X-WP-Total") ?? filteredProducts.length) };
   } catch {
     let products = [...featuredProducts];
     if (query.category) products = products.filter((product) => categorySlug(product.category) === query.category);
     if (query.search) { const needle = query.search.toLowerCase(); products = products.filter((product) => [product.name, product.category, product.description].some((value) => value.toLowerCase().includes(needle))); }
     if (query.orderby === "price") products.sort((a, b) => query.order === "asc" ? a.price - b.price : b.price - a.price);
-    return products;
+    const page = query.page ?? 1; const perPage = query.perPage ?? 24; const start = (page - 1) * perPage;
+    return { products: products.slice(start, start + perPage), page, totalPages: Math.max(1, Math.ceil(products.length / perPage)), totalProducts: products.length };
   }
 }
 
@@ -83,7 +90,13 @@ export async function getProductById(id: string): Promise<Product | null> {
 }
 
 export async function getProductCategories(): Promise<ProductCategory[]> {
-  return ["Baby Care", "Bath & Wash", "Hygiene"];
+  try {
+    const response = await fetch(`${storeApiUrl}/products/categories?per_page=100&hide_empty=true`, { next: { revalidate: 300 } });
+    if (!response.ok) throw new Error(`WooCommerce returned ${response.status}`);
+    return (await response.json() as { id: number; name: string; slug: string; count: number; image?: { src?: string } }[]).map((category) => ({ id: String(category.id), name: category.name, slug: category.slug, count: category.count, image: category.image?.src })).filter((category) => (category.count ?? 0) > 0);
+  } catch {
+    return ["Baby Care", "Bath & Wash", "Hygiene"].map((name) => ({ id: name, name, slug: categorySlug(name) }));
+  }
 }
 
 export async function searchProducts(query: string): Promise<Product[]> {

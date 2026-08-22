@@ -1,10 +1,16 @@
-export type ProductCategory = "Baby Care" | "Bath & Wash" | "Hygiene";
+export interface ProductCategory {
+  id: string;
+  name: string;
+  slug: string;
+  count?: number;
+  image?: string;
+}
 
 export interface Product {
   id: string;
   slug?: string;
   name: string;
-  category: ProductCategory;
+  category: string;
   description: string;
   shortDescription?: string;
   sku?: string;

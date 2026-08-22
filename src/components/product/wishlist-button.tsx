@@ -1,0 +1,5 @@
+"use client";
+import { Heart } from "lucide-react";
+import type { Product } from "@/types/product";
+import { useWishlistStore } from "@/store/wishlist.store";
+export function WishlistButton({ product, compact = true }: { product: Product; compact?: boolean }) { const saved = useWishlistStore((state) => state.hasHydrated && state.items.some((item) => item.id === product.id)); const toggle = useWishlistStore((state) => state.toggleItem); return <button type="button" onClick={() => toggle(product)} aria-label={saved ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`} aria-pressed={saved} className={compact ? "grid size-10 place-items-center rounded-full bg-white/90 text-[#3051a0] shadow-sm transition hover:bg-white" : "inline-flex items-center gap-2 rounded-full border border-[#3051a0] px-5 py-3 text-sm font-semibold text-[#3051a0]"}><Heart size={compact ? 18 : 16} fill={saved ? "currentColor" : "none"} />{!compact && (saved ? "Saved" : "Save to wishlist")}</button>; }
