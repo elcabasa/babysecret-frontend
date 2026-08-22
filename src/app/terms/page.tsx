@@ -1,0 +1,3 @@
+import { Header } from "@/components/layout/header";
+export const metadata = { title: "Terms & Conditions", description: "Terms and conditions content for Baby Secret, pending business approval." };
+export default function TermsPage() { return <main className="min-h-screen bg-[#f9fcff] px-6 pb-20 pt-36 sm:px-10"><Header /><div className="mx-auto max-w-3xl"><h1 className="text-5xl font-medium">Terms &amp; Conditions</h1><div className="glass-panel mt-10 rounded-2xl p-8 text-[#334f6d]"><p>Official terms and conditions are awaiting review and approval by Baby Secret. This page is intentionally not presented as final legal advice.</p></div></div></main>; }

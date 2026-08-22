@@ -1,0 +1,3 @@
+import { Header } from "@/components/layout/header";
+export const metadata = { title: "Privacy Policy", description: "Privacy policy content for Baby Secret, pending business approval." };
+export default function PrivacyPage() { return <main className="min-h-screen bg-[#f9fcff] px-6 pb-20 pt-36 sm:px-10"><Header /><div className="mx-auto max-w-3xl"><h1 className="text-5xl font-medium">Privacy Policy</h1><div className="glass-panel mt-10 rounded-2xl p-8 text-[#334f6d]"><p>Official privacy policy content is awaiting review and approval by Baby Secret. This page is intentionally not presented as a final legal policy.</p></div></div></main>; }
