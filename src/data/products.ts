@@ -7,14 +7,14 @@ const productImages = {
 };
 
 export const featuredProducts: Product[] = [
-  { id: "lotion-400", name: "Babysecret Lotion 400ml", category: "Baby Care", description: "Gentle everyday moisturiser for soft skin.", price: 6000, currency: "NGN", image: productImages.lotion, badge: "Sales" },
-  { id: "lotion-200", name: "Babysecret Lotion 200ml", category: "Baby Care", description: "Gentle everyday moisturiser for soft skin.", price: 3000, currency: "NGN", image: productImages.lotion, badge: "Sales" },
-  { id: "bath-1000", name: "Babysecret Bath 1000ml", category: "Bath & Wash", description: "Gentle cleanser for everyday bath time.", price: 8500, currency: "NGN", image: productImages.bath, badge: "Sales" },
-  { id: "bath-500", name: "Babysecret Bath 500ml", category: "Bath & Wash", description: "Gentle cleanser for everyday bath time.", price: 4500, currency: "NGN", image: productImages.bath, badge: "Sales" },
-  { id: "oil-120", name: "Babysecret Oil 120ml", category: "Baby Care", description: "Nourishing oil for soft, smooth skin.", price: 2500, currency: "NGN", image: productImages.care, badge: "Sales" },
-  { id: "olive-oil", name: "Babysecret Olive Oil", category: "Baby Care", description: "Olive oil for gentle skin care.", price: 2500, currency: "NGN", image: productImages.care, badge: "Sales" },
-  { id: "wipes", name: "Babysecret Wipes", category: "Baby Care", description: "Gentle wipes for everyday clean-ups.", price: 3000, currency: "NGN", image: productImages.care, badge: "Sales" },
-  { id: "sanitizing-wipes", name: "Babysecret Sanitizing Wipes", category: "Hygiene", description: "Handy wipes for quick sanitising.", price: 1000, currency: "NGN", image: productImages.care, badge: "Sales" },
+  { id: "lotion-400", slug: "lotion-400", name: "Babysecret Lotion 400ml", category: "Baby Care", description: "Gentle everyday moisturiser for soft skin.", price: 6000, currency: "NGN", image: productImages.lotion, badge: "Sales" },
+  { id: "lotion-200", slug: "lotion-200", name: "Babysecret Lotion 200ml", category: "Baby Care", description: "Gentle everyday moisturiser for soft skin.", price: 3000, currency: "NGN", image: productImages.lotion, badge: "Sales" },
+  { id: "bath-1000", slug: "bath-1000", name: "Babysecret Bath 1000ml", category: "Bath & Wash", description: "Gentle cleanser for everyday bath time.", price: 8500, currency: "NGN", image: productImages.bath, badge: "Sales" },
+  { id: "bath-500", slug: "bath-500", name: "Babysecret Bath 500ml", category: "Bath & Wash", description: "Gentle cleanser for everyday bath time.", price: 4500, currency: "NGN", image: productImages.bath, badge: "Sales" },
+  { id: "oil-120", slug: "oil-120", name: "Babysecret Oil 120ml", category: "Baby Care", description: "Nourishing oil for soft, smooth skin.", price: 2500, currency: "NGN", image: productImages.care, badge: "Sales" },
+  { id: "olive-oil", slug: "olive-oil", name: "Babysecret Olive Oil", category: "Baby Care", description: "Olive oil for gentle skin care.", price: 2500, currency: "NGN", image: productImages.care, badge: "Sales" },
+  { id: "wipes", slug: "wipes", name: "Babysecret Wipes", category: "Baby Care", description: "Gentle wipes for everyday clean-ups.", price: 3000, currency: "NGN", image: productImages.care, badge: "Sales" },
+  { id: "sanitizing-wipes", slug: "sanitizing-wipes", name: "Babysecret Sanitizing Wipes", category: "Hygiene", description: "Handy wipes for quick sanitising.", price: 1000, currency: "NGN", image: productImages.care, badge: "Sales" },
 ];
 
 export function formatPrice(price: number) {
