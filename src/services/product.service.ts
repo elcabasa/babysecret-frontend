@@ -18,18 +18,13 @@ type WooProduct = {
 
 const storeApiUrl = process.env.NEXT_PUBLIC_WOOCOMMERCE_STORE_API_URL ?? "https://babysecret.com/wp-json/wc/store/v1";
 
-function mapCategory(name?: string): string {
-  const value = name?.toLowerCase() ?? "";
-  if (value.includes("bath") || value.includes("shower") || value.includes("soap")) return "Bath & Wash";
-  if (value.includes("wipe")) return "Hygiene";
-  return "Baby Care";
-}
+
 
 function mapWooProduct(product: WooProduct): Product {
   const minorUnit = product.prices.currency_minor_unit ?? 2;
   const price = Number(product.prices.price) / 10 ** minorUnit;
   const regularPrice = product.prices.regular_price ? Number(product.prices.regular_price) / 10 ** minorUnit : undefined;
-  return { id: String(product.id), slug: product.slug, name: product.name.replace(/&#038;/g, "&"), category: mapCategory(product.categories?.[0]?.name), description: product.description?.replace(/<[^>]+>/g, "").trim() || product.short_description?.replace(/<[^>]+>/g, "").trim() || "Everyday care for delicate skin.", shortDescription: product.short_description?.replace(/<[^>]+>/g, "").trim(), sku: product.sku, regularPrice, price, currency: "NGN", image: product.images?.[0]?.src ?? featuredProducts[0].image, images: product.images?.map((image) => image.src), stockStatus: product.is_in_stock === false ? "out-of-stock" : "in-stock", purchasable: product.is_purchasable, badge: product.on_sale ? "Sales" : undefined };
+  return { id: String(product.id), slug: product.slug, name: product.name.replace(/&#038;/g, "&"), category: product.categories?.[0]?.slug ?? "", description: product.description?.replace(/<[^>]+>/g, "").trim() || product.short_description?.replace(/<[^>]+>/g, "").trim() || "Everyday care for delicate skin.", shortDescription: product.short_description?.replace(/<[^>]+>/g, "").trim(), sku: product.sku, regularPrice, price, currency: "NGN", image: product.images?.[0]?.src ?? featuredProducts[0].image, images: product.images?.map((image) => image.src), stockStatus: product.is_in_stock === false ? "out-of-stock" : "in-stock", purchasable: product.is_purchasable, badge: product.on_sale ? "Sales" : undefined };
 }
 
 type ProductQuery = { page?: number; perPage?: number; category?: string; search?: string; order?: "asc" | "desc"; orderby?: "date" | "price" | "popularity" };
@@ -43,23 +38,104 @@ export async function getProducts(query: ProductQuery = {}): Promise<Product[]> 
   return (await getProductList(query)).products;
 }
 
-export async function getProductList(query: ProductQuery = {}): Promise<ProductListResponse> {
-  const params = new URLSearchParams({ page: String(query.page ?? 1), per_page: String(query.perPage ?? 24), order: query.order ?? "desc", orderby: query.orderby ?? "date" });
-  if (query.search) params.set("search", query.search);
+export async function getProductList(
+  query: ProductQuery = {}
+): Promise<ProductListResponse> {
+  const page = query.page ?? 1;
+  const perPage = query.perPage ?? 24;
+
+  const params = new URLSearchParams({
+    page: String(page),
+    per_page: String(perPage),
+    order: query.order ?? "desc",
+    orderby: query.orderby ?? "date",
+  });
+
+  if (query.search?.trim()) {
+    params.set("search", query.search.trim());
+  }
+
   try {
-    const response = await fetch(`${storeApiUrl}/products?${params.toString()}`, { next: { revalidate: 60 } });
-    if (!response.ok) throw new Error(`WooCommerce returned ${response.status}`);
+    const response = await fetch(
+      `${storeApiUrl}/products?${params.toString()}`,
+      {
+        next: {
+          revalidate: 300,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `WooCommerce returned ${response.status}`
+      );
+    }
+
     const products = (await response.json()) as WooProduct[];
+
     const mapped = products.map(mapWooProduct);
-    const filteredProducts = query.category ? mapped.filter((product) => categorySlug(product.category) === query.category) : mapped;
-    return { products: filteredProducts, page: query.page ?? 1, totalPages: Number(response.headers.get("X-WP-TotalPages") ?? 1), totalProducts: Number(response.headers.get("X-WP-Total") ?? filteredProducts.length) };
+
+    const filteredProducts = query.category
+      ? mapped.filter(
+          (product) =>
+            categorySlug(product.category) === query.category
+        )
+      : mapped;
+
+    return {
+      products: filteredProducts,
+      page,
+      totalPages: Number(
+        response.headers.get("X-WP-TotalPages") ?? 1
+      ),
+      totalProducts: Number(
+        response.headers.get("X-WP-Total") ??
+          filteredProducts.length
+      ),
+    };
   } catch {
     let products = [...featuredProducts];
-    if (query.category) products = products.filter((product) => categorySlug(product.category) === query.category);
-    if (query.search) { const needle = query.search.toLowerCase(); products = products.filter((product) => [product.name, product.category, product.description].some((value) => value.toLowerCase().includes(needle))); }
-    if (query.orderby === "price") products.sort((a, b) => query.order === "asc" ? a.price - b.price : b.price - a.price);
-    const page = query.page ?? 1; const perPage = query.perPage ?? 24; const start = (page - 1) * perPage;
-    return { products: products.slice(start, start + perPage), page, totalPages: Math.max(1, Math.ceil(products.length / perPage)), totalProducts: products.length };
+
+    if (query.category) {
+      products = products.filter(
+        (product) =>
+          categorySlug(product.category) === query.category
+      );
+    }
+
+    if (query.search) {
+      const needle = query.search.toLowerCase().trim();
+
+      products = products.filter((product) =>
+        [
+          product.name,
+          product.category,
+          product.description,
+        ].some((value) =>
+          value.toLowerCase().includes(needle)
+        )
+      );
+    }
+
+    if (query.orderby === "price") {
+      products.sort((a, b) =>
+        query.order === "asc"
+          ? a.price - b.price
+          : b.price - a.price
+      );
+    }
+
+    const start = (page - 1) * perPage;
+
+    return {
+      products: products.slice(start, start + perPage),
+      page,
+      totalPages: Math.max(
+        1,
+        Math.ceil(products.length / perPage)
+      ),
+      totalProducts: products.length,
+    };
   }
 }
 
@@ -91,11 +167,56 @@ export async function getProductById(id: string): Promise<Product | null> {
 
 export async function getProductCategories(): Promise<ProductCategory[]> {
   try {
-    const response = await fetch(`${storeApiUrl}/products/categories?per_page=100&hide_empty=true`, { next: { revalidate: 300 } });
-    if (!response.ok) throw new Error(`WooCommerce returned ${response.status}`);
-    return (await response.json() as { id: number; name: string; slug: string; count: number; image?: { src?: string } }[]).map((category) => ({ id: String(category.id), name: category.name, slug: category.slug, count: category.count, image: category.image?.src })).filter((category) => (category.count ?? 0) > 0);
+    const response = await fetch(
+      `${storeApiUrl}/products/categories?per_page=100&hide_empty=true`,
+      {
+        next: {
+          revalidate: 300,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`WooCommerce returned ${response.status}`);
+    }
+
+    const categories = (await response.json()) as {
+      id: number;
+      name: string;
+      slug: string;
+      count: number;
+      image?: {
+        src?: string;
+      };
+    }[];
+
+    return categories
+      .map((category) => ({
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        count: category.count,
+        image: category.image?.src,
+      }))
+      .filter((category) => (category.count ?? 0) > 0);
   } catch {
-    return ["Baby Care", "Bath & Wash", "Hygiene"].map((name) => ({ id: name, name, slug: categorySlug(name) }));
+    return [
+      {
+        id: 1,
+        name: "Baby Care",
+        slug: categorySlug("Baby Care"),
+      },
+      {
+        id: 2,
+        name: "Bath & Wash",
+        slug: categorySlug("Bath & Wash"),
+      },
+      {
+        id: 3,
+        name: "Hygiene",
+        slug: categorySlug("Hygiene"),
+      },
+    ];
   }
 }
 
