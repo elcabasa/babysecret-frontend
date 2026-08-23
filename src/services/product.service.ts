@@ -167,11 +167,56 @@ export async function getProductById(id: string): Promise<Product | null> {
 
 export async function getProductCategories(): Promise<ProductCategory[]> {
   try {
-    const response = await fetch(`${storeApiUrl}/products/categories?per_page=100&hide_empty=true`, { next: { revalidate: 300 } });
-    if (!response.ok) throw new Error(`WooCommerce returned ${response.status}`);
-    return (await response.json() as { id: number; name: string; slug: string; count: number; image?: { src?: string } }[]).map((category) => ({ id: String(category.id), name: category.name, slug: category.slug, count: category.count, image: category.image?.src })).filter((category) => (category.count ?? 0) > 0);
+    const response = await fetch(
+      `${storeApiUrl}/products/categories?per_page=100&hide_empty=true`,
+      {
+        next: {
+          revalidate: 300,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`WooCommerce returned ${response.status}`);
+    }
+
+    const categories = (await response.json()) as {
+      id: number;
+      name: string;
+      slug: string;
+      count: number;
+      image?: {
+        src?: string;
+      };
+    }[];
+
+    return categories
+      .map((category) => ({
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        count: category.count,
+        image: category.image?.src,
+      }))
+      .filter((category) => (category.count ?? 0) > 0);
   } catch {
-    return ["Baby Care", "Bath & Wash", "Hygiene"].map((name) => ({ id: name, name, slug: categorySlug(name) }));
+    return [
+      {
+        id: 1,
+        name: "Baby Care",
+        slug: categorySlug("Baby Care"),
+      },
+      {
+        id: 2,
+        name: "Bath & Wash",
+        slug: categorySlug("Bath & Wash"),
+      },
+      {
+        id: 3,
+        name: "Hygiene",
+        slug: categorySlug("Hygiene"),
+      },
+    ];
   }
 }
 
