@@ -10,8 +10,233 @@ import type { CheckoutCustomer } from "@/types/order";
 const schema = z.object({ firstName: z.string().min(2, "Enter your first name"), lastName: z.string().min(2, "Enter your last name"), email: z.string().email("Enter a valid email"), phone: z.string().min(7, "Enter a valid phone number"), country: z.string().min(2, "Enter your country"), state: z.string().min(2, "Enter your state"), city: z.string().min(2, "Enter your city"), address: z.string().min(5, "Enter your delivery address"), apartment: z.string().optional(), notes: z.string().optional() });
 type FormValues = z.infer<typeof schema>;
 
-export function CheckoutForm() { const router = useRouter(); const items = useCartStore((state) => state.items); const clearCart = useCartStore((state) => state.clearCart); const [error, setError] = useState(""); const [cartIssues, setCartIssues] = useState<string[]>([]); const [submitting, setSubmitting] = useState(false); const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { country: "Nigeria" } });
-  const onSubmit = async (customer: CheckoutCustomer) => { if (!items.length) { setError("Your cart is empty."); return; } setError(""); setCartIssues([]); setSubmitting(true); try { const response = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ customer, items }) }); const result = await response.json() as { order?: { reference: string; paymentStatus: string }; message?: string; unavailableItems?: { name: string }[]; priceChanges?: { before: { name: string; price: number }; after: { price: number } }[] }; if (!response.ok || !result.order) { setCartIssues([...(result.unavailableItems ?? []).map((item) => `${item.name} is no longer available.`), ...(result.priceChanges ?? []).map((change) => `${change.before.name} changed from ${change.before.price} to ${change.after.price}.`)]); throw new Error(result.message ?? "Checkout could not be completed."); } if (result.order.paymentStatus === "paid") clearCart(); router.push(`/order-confirmation?reference=${encodeURIComponent(result.order.reference)}`); } catch (submissionError) { setError(submissionError instanceof Error ? submissionError.message : "Checkout could not be completed."); } finally { setSubmitting(false); } };
-  const field = (name: keyof FormValues, label: string, type = "text", wide = false) => <label className={`grid gap-2 text-sm ${wide ? "sm:col-span-2" : ""}`} htmlFor={name}>{label}<input id={name} type={type} {...register(name)} aria-invalid={Boolean(errors[name])} className="glass-control rounded-xl px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[#3051a0]" />{errors[name] && <span className="text-xs text-red-700" role="alert">{errors[name]?.message}</span>}</label>;
-  return <form onSubmit={handleSubmit(onSubmit)} className="glass-panel grid gap-5 rounded-2xl p-6 sm:grid-cols-2 sm:p-8">{field("firstName", "First name")}{field("lastName", "Last name")}{field("email", "Email", "email", true)}{field("phone", "Phone number", "tel", true)}{field("country", "Country")}{field("state", "State")}{field("city", "City")}{field("address", "Street address", "text", true)}{field("apartment", "Apartment, landmark (optional)", "text", true)}<label className="grid gap-2 text-sm sm:col-span-2" htmlFor="notes">Delivery notes (optional)<textarea id="notes" {...register("notes")} className="glass-control min-h-24 rounded-xl px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[#3051a0]" /></label>{cartIssues.length > 0 && <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 sm:col-span-2" role="alert"><p className="font-semibold">Review your cart before continuing</p><ul className="mt-2 list-disc space-y-1 pl-5">{cartIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul><p className="mt-2">Return to the cart to remove unavailable items or review updated prices.</p></div>}{error && <p className="text-sm text-red-700 sm:col-span-2" role="alert">{error}</p>}<button disabled={submitting || !items.length} className="rounded-full bg-[#005dbd] px-6 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 sm:justify-self-start">{submitting ? "Checking your order…" : "Continue to payment"}</button><p className="text-xs text-[#334f6d] sm:col-span-2">Payment is not configured in this environment. No payment will be charged.</p></form>;
+export function CheckoutForm() {
+  const router = useRouter();
+
+  const items = useCartStore((state) => state.items);
+  const clearCart = useCartStore((state) => state.clearCart);
+
+  const [error, setError] = useState("");
+  const [cartIssues, setCartIssues] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      country: "Nigeria",
+    },
+  });
+
+  const onSubmit = async (customer: CheckoutCustomer) => {
+    if (!items.length) {
+      setError("Your cart is empty.");
+      return;
+    }
+
+    setError("");
+    setCartIssues([]);
+    setSubmitting(true);
+
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customer,
+          items,
+        }),
+      });
+
+      const result = (await response.json()) as {
+        success?: boolean;
+        orderId?: number;
+        reference?: string;
+        authorizationUrl?: string;
+        message?: string;
+        unavailableItems?: {
+          name: string;
+        }[];
+        priceChanges?: {
+          before: {
+            name: string;
+            price: number;
+          };
+          after: {
+            price: number;
+          };
+        }[];
+      };
+
+      if (!response.ok || !result.success) {
+        setCartIssues([
+          ...(result.unavailableItems ?? []).map(
+            (item) => `${item.name} is no longer available.`
+          ),
+          ...(result.priceChanges ?? []).map(
+            (change) =>
+              `${change.before.name} changed from ${change.before.price} to ${change.after.price}.`
+          ),
+        ]);
+
+        throw new Error(
+          result.message ?? "Checkout could not be completed."
+        );
+      }
+
+      // Redirect the customer to Paystack
+      if (result.authorizationUrl) {
+        window.location.href = result.authorizationUrl;
+        return;
+      }
+
+      // Fallback for already-completed payments
+      if (result.reference) {
+        clearCart();
+
+        router.push(
+          `/order-confirmation?reference=${encodeURIComponent(
+            result.reference
+          )}`
+        );
+
+        return;
+      }
+
+      throw new Error("Could not initialize payment.");
+    } catch (submissionError) {
+      setError(
+        submissionError instanceof Error
+          ? submissionError.message
+          : "Checkout could not be completed."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const field = (
+    name: keyof FormValues,
+    label: string,
+    type = "text",
+    wide = false
+  ) => (
+    <label
+      className={`grid gap-2 text-sm ${
+        wide ? "sm:col-span-2" : ""
+      }`}
+      htmlFor={name}
+    >
+      {label}
+
+      <input
+        id={name}
+        type={type}
+        {...register(name)}
+        aria-invalid={Boolean(errors[name])}
+        className="glass-control rounded-xl px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[#3051a0]"
+      />
+
+      {errors[name] && (
+        <span
+          className="text-xs text-red-700"
+          role="alert"
+        >
+          {errors[name]?.message}
+        </span>
+      )}
+    </label>
+  );
+
+  return (
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="glass-panel grid gap-5 rounded-2xl p-6 sm:grid-cols-2 sm:p-8"
+    >
+      {field("firstName", "First name")}
+
+      {field("lastName", "Last name")}
+
+      {field("email", "Email", "email", true)}
+
+      {field("phone", "Phone number", "tel", true)}
+
+      {field("country", "Country")}
+
+      {field("state", "State")}
+
+      {field("city", "City")}
+
+      {field("address", "Street address", "text", true)}
+
+      {field(
+        "apartment",
+        "Apartment, landmark (optional)",
+        "text",
+        true
+      )}
+
+      <label
+        className="grid gap-2 text-sm sm:col-span-2"
+        htmlFor="notes"
+      >
+        Delivery notes (optional)
+
+        <textarea
+          id="notes"
+          {...register("notes")}
+          className="glass-control min-h-24 rounded-xl px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[#3051a0]"
+        />
+      </label>
+
+      {cartIssues.length > 0 && (
+        <div
+          className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 sm:col-span-2"
+          role="alert"
+        >
+          <p className="font-semibold">
+            Review your cart before continuing
+          </p>
+
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            {cartIssues.map((issue) => (
+              <li key={issue}>{issue}</li>
+            ))}
+          </ul>
+
+          <p className="mt-2">
+            Return to the cart to remove unavailable items or review
+            updated prices.
+          </p>
+        </div>
+      )}
+
+      {error && (
+        <p
+          className="text-sm text-red-700 sm:col-span-2"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
+
+      <button
+        disabled={submitting || !items.length}
+        className="rounded-full bg-[#005dbd] px-6 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 sm:justify-self-start"
+      >
+        {submitting
+          ? "Redirecting to payment…"
+          : "Continue to payment"}
+      </button>
+
+      <p className="text-xs text-[#334f6d] sm:col-span-2">
+        You will be redirected to Paystack to complete your payment securely.
+      </p>
+    </form>
+  );
 }
