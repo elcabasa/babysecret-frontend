@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Header } from "@/components/layout/header";
+import { CartClearer } from "@/components/cart/cart-clearer";
 
 export default async function OrderConfirmationPage({
   searchParams,
@@ -13,6 +14,8 @@ export default async function OrderConfirmationPage({
   return (
     <main className="min-h-screen bg-[#f9fcff] px-6 pb-20 pt-36 sm:px-10">
       <Header />
+
+      <CartClearer />
 
       <div className="mx-auto max-w-2xl text-center">
         <div className="glass-panel rounded-2xl p-10">

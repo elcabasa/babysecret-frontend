@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getPaymentProvider } from "@/services/payment/payment.service";
+import { arrangeShipment } from "@/services/shipping/shipping.service";
+
+type WooOrderMeta = { key: string; value: unknown };
+
+function metaValue(meta?: WooOrderMeta[], key?: string): string {
+  return meta?.find((entry) => entry.key === key)?.value?.toString() ?? "";
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -96,6 +103,29 @@ const transactionId =
       );
     }
 
+    /*
+     * Arrange the delivery with the logistics provider using the
+     * rate held on the order, then surface it back to WooCommerce.
+     */
+    const tshipRateId = metaValue(order.meta_data, "_babysecret_tship_rate_id");
+
+    let shipmentId = "";
+    let trackingNumber = "";
+
+    if (tshipRateId) {
+      try {
+        const arrangement = await arrangeShipment({
+          rateId: tshipRateId,
+          metadata: { store_order_reference: reference },
+        });
+
+        shipmentId = arrangement.shipmentId;
+        trackingNumber = arrangement.trackingNumber ?? "";
+      } catch (error) {
+        console.error("TShip arrangement error:", error);
+      }
+    }
+
     // Update the WooCommerce order
     const updateResponse = await fetch(
       `${wooUrl}/orders/${order.id}`,
@@ -111,6 +141,14 @@ const transactionId =
           status: "processing",
           transaction_id: reference,
           set_paid: true,
+          meta_data: [
+            ...(shipmentId
+              ? [{ key: "_babysecret_tship_shipment_id", value: shipmentId }]
+              : []),
+            ...(trackingNumber
+              ? [{ key: "_babysecret_tship_tracking", value: trackingNumber }]
+              : []),
+          ],
         }),
       }
     );

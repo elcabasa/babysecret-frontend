@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { siteConfig } from "@/data/site";
+import { Providers } from "@/components/auth/session-provider";
 
 type RootLayoutProps = Readonly<{
   children: React.ReactNode;
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
       lang="en"
       className="h-full antialiased"
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
