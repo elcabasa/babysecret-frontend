@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getPaymentProvider } from "@/services/payment/payment.service";
+import { toFormBody } from "@/lib/woocommerce-auth";
+import { getDeliveryQuotes, getShippingProviderName } from "@/services/shipping/shipping.service";
+import { defaultPickupAddress, defaultItemWeightKg, countryToCode } from "@/services/shipping/tship.service";
+import type { CheckoutDelivery } from "@/types/order";
 
 const checkoutSchema = z.object({
   customer: z.object({
@@ -21,11 +25,69 @@ const checkoutSchema = z.object({
     .array(
       z.object({
         productId: z.string(),
+        name: z.string().optional(),
+        price: z.number().optional(),
         quantity: z.number().int().positive(),
       })
     )
     .min(1),
+
+  delivery: z
+    .object({
+      rateId: z.string().min(1),
+      carrier: z.string().min(1),
+      service: z.string().optional(),
+      amount: z.number().nonnegative(),
+    })
+    .nullable()
+    .optional(),
 });
+
+async function verifyDeliveryQuote(
+  delivery: CheckoutDelivery,
+  customer: z.infer<typeof checkoutSchema>["customer"],
+  items: z.infer<typeof checkoutSchema>["items"]
+): Promise<CheckoutDelivery | null> {
+  const parcelItems = items.map((item) => ({
+    id: item.productId,
+    name: item.name ?? item.productId,
+    value: (item.price ?? 0) * item.quantity,
+    weight: defaultItemWeightKg,
+    quantity: item.quantity,
+  }));
+
+  const quotes = await getDeliveryQuotes({
+    pickup: defaultPickupAddress(),
+    delivery: {
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      email: customer.email,
+      phone: customer.phone,
+      line1: customer.address,
+      line2: customer.apartment,
+      city: customer.city,
+      state: customer.state,
+      country: customer.country,
+    },
+    items: parcelItems,
+  });
+
+  const match = quotes.find(
+    (quote) =>
+      quote.carrierName === delivery.carrier &&
+      Math.abs(quote.amount - delivery.amount) <= 1 &&
+      (!delivery.service || quote.service === delivery.service)
+  );
+
+  if (!match) return null;
+
+  return {
+    rateId: match.rateId,
+    carrier: match.carrierName,
+    service: match.service,
+    amount: match.amount,
+  };
+}
 
 export async function POST(request: Request) {
   console.log("Environment:", process.env.NODE_ENV);
@@ -77,6 +139,24 @@ console.log(
 
    const { customer, items } = parsed.data;
 
+   let delivery = parsed.data.delivery ?? null;
+
+    if (delivery) {
+      const verified = await verifyDeliveryQuote(delivery, customer, items);
+
+      if (!verified) {
+        return NextResponse.json(
+          {
+            message:
+              "Your delivery estimate has changed. Please review your delivery options before continuing.",
+          },
+          { status: 409 }
+        );
+      }
+
+      delivery = verified;
+    }
+
     const wooUrl = process.env.WOOCOMMERCE_REST_URL;
     const consumerKey = process.env.WOOCOMMERCE_CONSUMER_KEY;
     const consumerSecret = process.env.WOOCOMMERCE_CONSUMER_SECRET;
@@ -107,58 +187,77 @@ console.log(
     /*
      * Create the WooCommerce order.
      */
+    const orderBody = toFormBody({
+      payment_method: "paystack",
+      payment_method_title: "Paystack",
+      set_paid: false,
+      billing: {
+        first_name: customer.firstName,
+        last_name: customer.lastName,
+        email: customer.email,
+        phone: customer.phone,
+        address_1: customer.address,
+        address_2: customer.apartment || "",
+        city: customer.city,
+        state: customer.state,
+        country: countryToCode(customer.country),
+      },
+      shipping: {
+        first_name: customer.firstName,
+        last_name: customer.lastName,
+        address_1: customer.address,
+        address_2: customer.apartment || "",
+        city: customer.city,
+        state: customer.state,
+        country: countryToCode(customer.country),
+      },
+      customer_note: customer.notes || "",
+      line_items: items.map((item) => ({
+        product_id: Number(item.productId),
+        quantity: item.quantity,
+      })),
+      shipping_lines: delivery
+        ? [
+            {
+              method_id:
+                getShippingProviderName() === "tship"
+                  ? "terminal_tship"
+                  : delivery.rateId,
+              method_title: delivery.carrier,
+              total: String(delivery.amount),
+            },
+          ]
+        : [],
+      meta_data: [
+        { key: "_babysecret_paystack_reference", value: reference },
+        ...(delivery
+          ? [
+              { key: "_babysecret_shipping_rate_id", value: delivery.rateId },
+              { key: "_babysecret_shipping_carrier", value: delivery.carrier },
+              { key: "_babysecret_shipping_service", value: delivery.service ?? "" },
+              { key: "_babysecret_shipping_amount", value: String(delivery.amount) },
+            ]
+          : []),
+        ...(delivery && getShippingProviderName() === "tship"
+          ? [
+              { key: "_babysecret_tship_rate_id", value: delivery.rateId },
+              { key: "_babysecret_tship_carrier", value: delivery.carrier },
+              { key: "_babysecret_tship_service", value: delivery.service ?? "" },
+              { key: "_babysecret_tship_amount", value: String(delivery.amount) },
+            ]
+          : []),
+      ],
+    });
+
     const wooResponse = await fetch(`${wooUrl}/orders`, {
       method: "POST",
 
       headers: {
         Authorization: `Basic ${auth}`,
-        "Content-Type": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
       },
 
-      body: JSON.stringify({
-        payment_method: "paystack",
-
-        payment_method_title: "Paystack",
-
-        set_paid: false,
-
-      billing: {
-  first_name: customer.firstName,
-  last_name: customer.lastName,
-  email: customer.email,
-  phone: customer.phone,
-  address_1: customer.address,
-  address_2: customer.apartment || "",
-  city: customer.city,
-  state: customer.state,
-  country: customer.country,
-},
-
-      shipping: {
-  first_name: customer.firstName,
-  last_name: customer.lastName,
-  address_1: customer.address,
-  address_2: customer.apartment || "",
-  city: customer.city,
-  state: customer.state,
-  country: customer.country,
-},
-
-      customer_note: customer.notes || "",
-
-       line_items: items.map((item) => ({
-  product_id: Number(item.productId),
-  quantity: item.quantity,
-})),
-
-        meta_data: [
-          {
-            key: "_babysecret_paystack_reference",
-
-            value: reference,
-          },
-        ],
-      }),
+      body: orderBody,
     });
 
     const wooOrder = await wooResponse.json();
