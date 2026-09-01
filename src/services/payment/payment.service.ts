@@ -151,16 +151,6 @@ class FlutterwavePaymentProvider implements PaymentProvider {
 
     const result = await response.json();
 
-    console.log(
-      "Flutterwave response status:",
-      response.status
-    );
-
-    console.log(
-      "Flutterwave response:",
-      result
-    );
-
     if (
       !response.ok ||
       result.status !== "success" ||
@@ -210,11 +200,6 @@ class FlutterwavePaymentProvider implements PaymentProvider {
 
     const result = await response.json();
 
-    console.log(
-      "Flutterwave verification response:",
-      result
-    );
-
     const verified =
       response.ok &&
       result.status === "success" &&
@@ -235,8 +220,6 @@ export function getPaymentProvider(
   const provider =
     providerName ||
     process.env.PAYMENT_PROVIDER;
-
-  console.log("Payment provider:", provider);
 
   if (provider === "paystack") {
     return new PaystackPaymentProvider();

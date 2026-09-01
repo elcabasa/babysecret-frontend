@@ -1,7 +1,6 @@
 "use client";
 
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
 import type { CartItem, CartItemInput } from "@/types/cart";
 
 type CartState = {
@@ -19,9 +18,9 @@ type CartState = {
 
 const matches = (item: CartItem, productId: string, variantId?: string) => item.productId === productId && item.variantId === variantId;
 
-export const useCartStore = create<CartState>()(persist((set) => ({
+export const useCartStore = create<CartState>()((set) => ({
   items: [],
-  hasHydrated: false,
+  hasHydrated: true,
   setHasHydrated: (value) => set({ hasHydrated: value }),
   setItems: (items) => set({ items }),
   addItem: (input) => set((state) => {
@@ -35,11 +34,6 @@ export const useCartStore = create<CartState>()(persist((set) => ({
   incrementQuantity: (productId, variantId) => set((state) => ({ items: state.items.map((item) => matches(item, productId, variantId) ? { ...item, quantity: item.quantity + 1 } : item) })),
   decrementQuantity: (productId, variantId) => set((state) => ({ items: state.items.map((item) => matches(item, productId, variantId) ? { ...item, quantity: Math.max(1, item.quantity - 1) } : item) })),
   clearCart: () => set({ items: [] }),
-}), {
-  name: "babysecret-cart",
-  storage: createJSONStorage(() => localStorage),
-  partialize: (state) => ({ items: state.items }),
-  onRehydrateStorage: () => (state) => state?.setHasHydrated(true),
 }));
 
 export const selectTotalItems = (state: CartState) => state.items.reduce((total, item) => total + item.quantity, 0);

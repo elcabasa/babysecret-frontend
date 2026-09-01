@@ -107,22 +107,25 @@ const transactionId =
      * Arrange the delivery with the logistics provider using the
      * rate held on the order, then surface it back to WooCommerce.
      */
-    const tshipRateId = metaValue(order.meta_data, "_babysecret_tship_rate_id");
+    const shippingRateId =
+      metaValue(order.meta_data, "_babysecret_tship_rate_id") ||
+      metaValue(order.meta_data, "_babysecret_shipbubble_rate_id") ||
+      metaValue(order.meta_data, "_babysecret_shipping_rate_id");
 
     let shipmentId = "";
     let trackingNumber = "";
 
-    if (tshipRateId) {
+    if (shippingRateId) {
       try {
         const arrangement = await arrangeShipment({
-          rateId: tshipRateId,
+          rateId: shippingRateId,
           metadata: { store_order_reference: reference },
         });
 
         shipmentId = arrangement.shipmentId;
         trackingNumber = arrangement.trackingNumber ?? "";
       } catch (error) {
-        console.error("TShip arrangement error:", error);
+        console.error("Shipment arrangement error:", error);
       }
     }
 

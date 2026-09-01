@@ -4,11 +4,15 @@ import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useCartStore } from "@/store/cart.store";
 import { useWishlistStore } from "@/store/wishlist.store";
+import type { CartItem } from "@/types/cart";
+
+function sameCart(a: CartItem[], b: CartItem[]): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
 
 export function UserDataSync() {
   const { status, data: session } = useSession();
   const cartItems = useCartStore((s) => s.items);
-  const cartHydrated = useCartStore((s) => s.hasHydrated);
   const setCartItems = useCartStore((s) => s.setItems);
   const clearCart = useCartStore((s) => s.clearCart);
 
@@ -20,32 +24,24 @@ export function UserDataSync() {
   const activeUserId = useRef<string | null>(null);
   const isInitialLoadDone = useRef(false);
 
-  // Handle Account Switch / Login / Logout
   useEffect(() => {
     const currentUserId = session?.user?.id ?? null;
 
     if (status === "authenticated" && currentUserId) {
-      // If user changed
       if (activeUserId.current !== currentUserId) {
         activeUserId.current = currentUserId;
         isInitialLoadDone.current = false;
 
-        // Fetch WooCommerce cart for this specific account
         fetch("/api/account/cart")
           .then((r) => (r.ok ? r.json() : null))
           .then((data) => {
-            if (data?.items && Array.isArray(data.items)) {
-              setCartItems(data.items);
-            } else {
-              setCartItems([]);
-            }
+            setCartItems(Array.isArray(data?.items) ? data.items : []);
           })
           .catch(() => {})
           .finally(() => {
             isInitialLoadDone.current = true;
           });
 
-        // Fetch WooCommerce wishlist for this specific account
         fetch("/api/account/wishlist")
           .then((r) => (r.ok ? r.json() : null))
           .then((data) => {
@@ -58,7 +54,6 @@ export function UserDataSync() {
           .catch(() => {});
       }
     } else if (status === "unauthenticated") {
-      // When signed out, clear in-memory cart and wishlist
       if (activeUserId.current !== null) {
         activeUserId.current = null;
         isInitialLoadDone.current = false;
@@ -69,7 +64,6 @@ export function UserDataSync() {
   }, [
     status,
     session?.user?.id,
-    cartHydrated,
     wishlistHydrated,
     setCartItems,
     setWishlistItems,
@@ -77,7 +71,6 @@ export function UserDataSync() {
     clearWishlist,
   ]);
 
-  // Sync Cart to WooCommerce when modified by authenticated user
   useEffect(() => {
     if (status !== "authenticated" || !activeUserId.current || !isInitialLoadDone.current) return;
 
@@ -86,13 +79,20 @@ export function UserDataSync() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items: cartItems }),
-      }).catch(() => {});
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          const verified = data?.items as CartItem[] | undefined;
+          if (Array.isArray(verified) && !sameCart(verified, useCartStore.getState().items)) {
+            setCartItems(verified);
+          }
+        })
+        .catch(() => {});
     }, 600);
 
     return () => clearTimeout(timer);
-  }, [cartItems, status]);
+  }, [cartItems, status, setCartItems]);
 
-  // Sync Wishlist to WooCommerce when modified by authenticated user
   useEffect(() => {
     if (status !== "authenticated" || !activeUserId.current || !isInitialLoadDone.current) return;
 
