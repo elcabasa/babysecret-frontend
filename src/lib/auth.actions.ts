@@ -7,9 +7,13 @@ import { signIn, signOut } from "@/auth";
 import {
   authenticateWooCommerce,
   getCustomerByEmail,
+  WooCommerceAuthError,
 } from "@/lib/woocommerce-auth";
 
 const homeRedirect = `/?auth_success=${encodeURIComponent("Welcome back!")}`;
+
+const GOOGLE_ACCOUNT_MESSAGE =
+  "This account uses Google Sign-In. Please log in using the Google button.";
 
 export async function loginAction(
   _prevState: { error?: string },
@@ -21,17 +25,33 @@ export async function loginAction(
   let user;
   try {
     ({ user } = await authenticateWooCommerce(email, password));
-  } catch {
+  } catch (error) {
     const customer = await getCustomerByEmail(email);
     const provider = customer?.meta_data?.find(
       (meta) => meta.key === "auth_provider"
     )?.value;
 
     if (provider === "google") {
-      return {
-        error:
-          "This account uses Google Sign-In. Please log in using the Google button.",
-      };
+      return { error: GOOGLE_ACCOUNT_MESSAGE };
+    }
+
+    if (error instanceof WooCommerceAuthError) {
+      switch (error.code) {
+        case "AUTH_ENDPOINT_NOT_FOUND":
+        case "AUTH_SERVER_ERROR":
+          return {
+            error:
+              "The store sign-in service is not available. Please try again later or contact support.",
+          };
+        case "AUTH_NETWORK_ERROR":
+          return {
+            error: "We could not reach the store. Please check your connection and try again.",
+          };
+        case "ACCOUNT_NOT_FOUND":
+          return { error: "No account was found for this email." };
+        default:
+          return { error: "Invalid email or password." };
+      }
     }
 
     return { error: "Invalid email or password." };
@@ -61,6 +81,15 @@ export async function googleAction(): Promise<void> {
   try {
     await signIn("google", { redirectTo: homeRedirect });
   } catch (error) {
+    const collision =
+      error instanceof Error &&
+      (error.message.includes("ACCOUNT_PASSWORD_COLLISION") ||
+        error.message.includes("OAuthAccountNotLinked"));
+
+    if (collision) {
+      redirect("/login?error=ACCOUNT_PASSWORD_COLLISION");
+    }
+
     if (error instanceof AuthError) {
       return;
     }

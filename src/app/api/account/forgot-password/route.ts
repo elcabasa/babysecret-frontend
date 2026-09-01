@@ -19,11 +19,16 @@ export async function POST(request: Request) {
       const customer = await getCustomerByEmail(email);
 
       if (customer) {
-        const token = storeResetToken(email, customer.id);
+        const token = await storeResetToken(email, customer.id);
         const appUrl =
           process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
         const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(token)}`;
-        await sendResetEmail(email, resetUrl);
+
+        try {
+          await sendResetEmail(email, resetUrl);
+        } catch (error) {
+          console.error("Forgot password: email send failed:", error);
+        }
       }
     }
 

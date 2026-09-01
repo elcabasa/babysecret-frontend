@@ -21,7 +21,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const entry = consumeResetToken(parsed.data.token);
+    const entry = await consumeResetToken(parsed.data.token);
 
     if (!entry) {
       return NextResponse.json(

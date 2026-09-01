@@ -45,6 +45,8 @@ export interface ArrangedShipment {
   status: "draft" | "confirmed" | "pending" | "fulfilled";
 }
 
+export type ShippingProviderName = "tship" | "shipbubble" | "mock" | "woocommerce";
+
 export interface ShippingProvider {
   getQuotes(input: DeliveryQuoteInput): Promise<DeliveryQuote[]>;
   arrangeShipment(input: {

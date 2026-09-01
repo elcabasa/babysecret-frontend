@@ -40,8 +40,13 @@ export async function POST(request: Request) {
     }
 
     const code = generateOtp();
-    storeOtp(email, code, customer.id);
-    await sendOtpEmail(email, code);
+    await storeOtp(email, code, customer.id);
+
+    try {
+      await sendOtpEmail(email, code);
+    } catch (error) {
+      console.error("Resend OTP: email send failed:", error);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

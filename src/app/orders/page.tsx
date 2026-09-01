@@ -68,7 +68,7 @@ function OrderRow({ order }: { order: CustomerOrder }) {
 export default async function OrdersPage() {
   const session = await auth();
 
-  if (!session?.user?.email) {
+  if (!session?.user?.email || !session.user.id) {
     redirect("/login");
   }
 
@@ -76,7 +76,9 @@ export default async function OrdersPage() {
   let error: string | null = null;
 
   try {
-    orders = await getCustomerOrders(session.user.email);
+    // The customer id comes from the authenticated server-side session — never
+    // from the browser — so a user can only ever fetch their own orders.
+    orders = await getCustomerOrders(session.user.id);
   } catch {
     error = "We could not load your orders right now. Please try again later.";
   }

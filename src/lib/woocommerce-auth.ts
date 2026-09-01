@@ -86,9 +86,16 @@ function metaValue(customer: WooCustomer, key: string): unknown {
   return customer.meta_data?.find((meta) => meta.key === key)?.value;
 }
 
+export function getCustomerMeta(customer: WooCustomer, key: string): string {
+  const value = metaValue(customer, key);
+  return value === undefined || value === null ? "" : String(value);
+}
+
 export function mapWooCustomer(customer: WooCustomer): User {
   const firstName = customer.first_name || customer.billing?.first_name || "";
   const lastName = customer.last_name || customer.billing?.last_name || "";
+
+  const emailVerifiedMeta = getCustomerMeta(customer, "email_verified");
 
   return {
     id: String(customer.id),
@@ -98,7 +105,10 @@ export function mapWooCustomer(customer: WooCustomer): User {
     lastName,
     username: customer.username,
     role: customer.role === "administrator" ? "admin" : "customer",
-    emailVerified: metaValue(customer, "email_verified") === "true",
+    // Accounts created before email verification existed (no meta) or that
+    // were explicitly verified are allowed to sign in. Only accounts that
+    // are explicitly marked as unverified are required to verify.
+    emailVerified: emailVerifiedMeta === "false" ? false : true,
     authProvider:
       (metaValue(customer, "auth_provider") as "password" | "google") ??
       "password",
@@ -153,29 +163,102 @@ export async function getCustomerById(
   }
 }
 
+export type AuthErrorCode =
+  | "INVALID_CREDENTIALS"
+  | "AUTH_ENDPOINT_NOT_FOUND"
+  | "AUTH_SERVER_ERROR"
+  | "AUTH_SERVICE_ERROR"
+  | "AUTH_NETWORK_ERROR"
+  | "ACCOUNT_NOT_FOUND";
+
+export class WooCommerceAuthError extends Error {
+  readonly code: AuthErrorCode;
+
+  constructor(code: AuthErrorCode, message: string) {
+    super(message);
+    this.name = "WooCommerceAuthError";
+    this.code = code;
+  }
+}
+
 export async function authenticateWooCommerce(
   email: string,
   password: string
 ): Promise<{ token: string; user: User }> {
   const tokenBody = new URLSearchParams({ username: email, password: password });
 
-  const tokenResponse = await fetch(`${wpRoot}/wp-json/jwt-auth/v1/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: tokenBody.toString(),
-    cache: "no-store",
-  });
+  let tokenResponse: Response;
+  try {
+    tokenResponse = await fetch(`${wpRoot}/wp-json/jwt-auth/v1/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: tokenBody.toString(),
+      cache: "no-store",
+    });
+  } catch (error) {
+    console.error("[auth] jwt-auth network error:", error);
+    throw new WooCommerceAuthError(
+      "AUTH_NETWORK_ERROR",
+      "We could not reach the store right now."
+    );
+  }
 
-  const tokenData = await tokenResponse.json();
+  let tokenData: { token?: string; code?: string; message?: string } = {};
+  try {
+    tokenData = await tokenResponse.json();
+  } catch {
+    tokenData = {};
+  }
 
-  if (!tokenResponse.ok || !tokenData.token) {
-    throw new Error(tokenData?.message ?? "Invalid email or password.");
+  if (!tokenResponse.ok) {
+    console.error(
+      `[auth] jwt-auth failed status=${tokenResponse.status} code=${tokenData.code ?? ""} message=${tokenData.message ?? ""}`
+    );
+
+    if (tokenResponse.status === 404) {
+      throw new WooCommerceAuthError(
+        "AUTH_ENDPOINT_NOT_FOUND",
+        "The store sign-in service is not available."
+      );
+    }
+
+    if (tokenResponse.status >= 500) {
+      throw new WooCommerceAuthError(
+        "AUTH_SERVER_ERROR",
+        "The store sign-in service is not available."
+      );
+    }
+
+    if (tokenResponse.status === 403) {
+      throw new WooCommerceAuthError(
+        "INVALID_CREDENTIALS",
+        "Invalid email or password."
+      );
+    }
+
+    throw new WooCommerceAuthError(
+      "AUTH_SERVICE_ERROR",
+      "We could not sign you in right now."
+    );
+  }
+
+  if (!tokenData.token) {
+    console.error(
+      `[auth] jwt-auth returned no token body=${JSON.stringify(tokenData)}`
+    );
+    throw new WooCommerceAuthError(
+      "AUTH_SERVICE_ERROR",
+      "The store sign-in service is not available."
+    );
   }
 
   const customer = await getCustomerByEmail(email);
 
   if (!customer) {
-    throw new Error("Account not found.");
+    throw new WooCommerceAuthError(
+      "ACCOUNT_NOT_FOUND",
+      "No account was found for this email."
+    );
   }
 
   return { token: tokenData.token, user: mapWooCustomer(customer) };
@@ -253,5 +336,17 @@ export async function setEmailVerified(
 ): Promise<void> {
   await updateWooCustomer(id, {
     meta_data: [{ key: "email_verified", value: verified ? "true" : "false" }],
+  });
+}
+
+export async function updateCustomerMeta(
+  id: number | string,
+  entries: { key: string; value: string | number | boolean }[]
+): Promise<void> {
+  await updateWooCustomer(id, {
+    meta_data: entries.map((entry) => ({
+      key: entry.key,
+      value: String(entry.value),
+    })),
   });
 }

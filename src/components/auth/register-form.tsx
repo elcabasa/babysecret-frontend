@@ -51,14 +51,14 @@ export function RegisterForm({ googleEnabled = true }: { googleEnabled?: boolean
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {error && (
         <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </p>
       )}
 
-{googleConflict && googleEnabled && (
+      {googleConflict && googleEnabled && (
         <div className="flex flex-col gap-3 rounded-xl bg-blue-50 px-4 py-4">
           <p className="text-sm text-[#102a43]">
             Already have a Google account? Continue with Google below.
@@ -73,66 +73,68 @@ export function RegisterForm({ googleEnabled = true }: { googleEnabled?: boolean
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1 text-sm font-medium text-[#102a43]">
+            First name
+            <input
+              name="firstName"
+              required
+              className="rounded-xl border border-[#d6e0f0] bg-white px-4 py-3 outline-none focus:border-[#3051a0]"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium text-[#102a43]">
+            Last name
+            <input
+              name="lastName"
+              required
+              className="rounded-xl border border-[#d6e0f0] bg-white px-4 py-3 outline-none focus:border-[#3051a0]"
+            />
+          </label>
+        </div>
+
         <label className="flex flex-col gap-1 text-sm font-medium text-[#102a43]">
-          First name
+          Email
           <input
-            name="firstName"
+            name="email"
+            type="email"
             required
+            autoComplete="email"
             className="rounded-xl border border-[#d6e0f0] bg-white px-4 py-3 outline-none focus:border-[#3051a0]"
           />
         </label>
+
         <label className="flex flex-col gap-1 text-sm font-medium text-[#102a43]">
-          Last name
+          Phone
           <input
-            name="lastName"
+            name="phone"
+            type="tel"
             required
+            autoComplete="tel"
             className="rounded-xl border border-[#d6e0f0] bg-white px-4 py-3 outline-none focus:border-[#3051a0]"
           />
         </label>
-      </div>
 
-      <label className="flex flex-col gap-1 text-sm font-medium text-[#102a43]">
-        Email
-        <input
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-          className="rounded-xl border border-[#d6e0f0] bg-white px-4 py-3 outline-none focus:border-[#3051a0]"
-        />
-      </label>
+        <label className="flex flex-col gap-1 text-sm font-medium text-[#102a43]">
+          Password
+          <input
+            name="password"
+            type="password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+            className="rounded-xl border border-[#d6e0f0] bg-white px-4 py-3 outline-none focus:border-[#3051a0]"
+          />
+        </label>
 
-      <label className="flex flex-col gap-1 text-sm font-medium text-[#102a43]">
-        Phone
-        <input
-          name="phone"
-          type="tel"
-          required
-          autoComplete="tel"
-          className="rounded-xl border border-[#d6e0f0] bg-white px-4 py-3 outline-none focus:border-[#3051a0]"
-        />
-      </label>
-
-      <label className="flex flex-col gap-1 text-sm font-medium text-[#102a43]">
-        Password
-        <input
-          name="password"
-          type="password"
-          required
-          minLength={8}
-          autoComplete="new-password"
-          className="rounded-xl border border-[#d6e0f0] bg-white px-4 py-3 outline-none focus:border-[#3051a0]"
-        />
-      </label>
-
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-full bg-[#3051a0] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#26407f] disabled:opacity-60"
-      >
-        {pending ? "Creating account..." : "Create account"}
-      </button>
+        <button
+          type="submit"
+          disabled={pending}
+          className="rounded-full bg-[#3051a0] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#26407f] disabled:opacity-60"
+        >
+          {pending ? "Creating account..." : "Create account"}
+        </button>
+      </form>
 
       {googleEnabled && (
         <>
@@ -152,6 +154,6 @@ export function RegisterForm({ googleEnabled = true }: { googleEnabled?: boolean
           Sign in
         </Link>
       </p>
-    </form>
+    </div>
   );
 }

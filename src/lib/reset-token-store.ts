@@ -1,44 +1,67 @@
-type ResetEntry = {
+import { randomUUID } from "crypto";
+
+import {
+  getCustomerById,
+  getCustomerMeta,
+  updateCustomerMeta,
+} from "@/lib/woocommerce-auth";
+
+export type ResetEntry = {
   token: string;
   customerId: number;
   email: string;
   expires: number;
 };
 
-const store = new Map<string, ResetEntry>();
-
 const RESET_TTL_MS = 30 * 60 * 1000;
 
-export function storeResetToken(
+const RESET_TOKEN_KEY = "babysecret_reset_token";
+const RESET_EXPIRES_KEY = "babysecret_reset_expires";
+
+export async function storeResetToken(
   email: string,
   customerId: number
-): string {
-  const token =
-    Math.random().toString(36).slice(2) + Date.now().toString(36);
-  store.set(token, {
-    token,
-    customerId,
-    email: email.toLowerCase(),
-    expires: Date.now() + RESET_TTL_MS,
-  });
+): Promise<string> {
+  // Embedding the customer id lets `consumeResetToken` locate the customer
+  // from a bare token without scanning every account.
+  const token = `${customerId}.${randomUUID().replace(/-/g, "")}`;
+
+  await updateCustomerMeta(customerId, [
+    { key: RESET_TOKEN_KEY, value: token },
+    { key: RESET_EXPIRES_KEY, value: String(Date.now() + RESET_TTL_MS) },
+  ]);
+
   return token;
 }
 
-export function verifyResetToken(token: string): ResetEntry | null {
-  const entry = store.get(token);
+export async function verifyResetToken(token: string): Promise<ResetEntry | null> {
+  const customerId = Number(token.split(".")[0]);
+  if (!customerId || !Number.isFinite(customerId)) return null;
 
-  if (!entry) return null;
+  const customer = await getCustomerById(customerId);
+  if (!customer) return null;
 
-  if (Date.now() > entry.expires) {
-    store.delete(token);
-    return null;
-  }
+  const storedToken = getCustomerMeta(customer, RESET_TOKEN_KEY);
+  const expires = Number(getCustomerMeta(customer, RESET_EXPIRES_KEY) || "0");
 
-  return entry;
+  if (storedToken !== token || expires <= Date.now()) return null;
+
+  return {
+    token,
+    customerId,
+    email: customer.email.toLowerCase(),
+    expires,
+  };
 }
 
-export function consumeResetToken(token: string): ResetEntry | null {
-  const entry = verifyResetToken(token);
-  if (entry) store.delete(token);
+export async function consumeResetToken(token: string): Promise<ResetEntry | null> {
+  const entry = await verifyResetToken(token);
+  if (!entry) return null;
+
+  await updateCustomerMeta(entry.customerId, [
+    { key: RESET_TOKEN_KEY, value: "" },
+    { key: RESET_EXPIRES_KEY, value: "" },
+  ]);
+
   return entry;
 }

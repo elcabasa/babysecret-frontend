@@ -11,6 +11,11 @@ import {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
+  // Derive the site URL from the request host so OAuth redirects work on the
+  // Vercel test domain, localhost, and the production domain without
+  // hard-coding any environment. Set AUTH_TRUST_HOST=true in serverless
+  // deployments (Vercel sets it automatically).
+  trustHost: true,
   pages: {
     error: "/login",
   },
@@ -86,7 +91,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         )?.value;
 
         if (provider === "password") {
-          throw new Error("ACCOUNT_PASSWORD_COLLISION");
+          const error = new Error("ACCOUNT_PASSWORD_COLLISION");
+          (error as { code?: string }).code = "ACCOUNT_PASSWORD_COLLISION";
+          console.error(
+            "[auth] google sign-in blocked: account is password-protected"
+          );
+          throw error;
         }
 
         await updateWooCustomer(existing.id, {

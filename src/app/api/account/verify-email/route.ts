@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { setEmailVerified } from "@/lib/woocommerce-auth";
+import {
+  getCustomerByEmail,
+  getCustomerMeta,
+  setEmailVerified,
+} from "@/lib/woocommerce-auth";
 import { verifyOtp } from "@/lib/otp-store";
 
 const schema = z.object({
@@ -21,12 +25,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const customerId = verifyOtp(
-      parsed.data.email.toLowerCase().trim(),
-      parsed.data.code
-    );
+    const email = parsed.data.email.toLowerCase().trim();
+    const customerId = await verifyOtp(email, parsed.data.code);
 
     if (!customerId) {
+      const existing = await getCustomerByEmail(email);
+
+      if (existing && getCustomerMeta(existing, "email_verified") === "true") {
+        return NextResponse.json({ success: true });
+      }
+
       return NextResponse.json(
         { message: "Invalid or expired code." },
         { status: 400 }
