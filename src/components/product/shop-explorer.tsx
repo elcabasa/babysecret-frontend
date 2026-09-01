@@ -141,29 +141,36 @@ export function ShopExplorer({
         </button>
       </form>
 
-      <div className="mb-8 flex flex-wrap gap-2">
+      <div className="mb-8 flex flex-wrap gap-2.5">
         <button
           type="button"
           onClick={() => applyCategory("")}
-          className={`glass-control rounded-full px-4 py-2 text-sm ${
-            category === "" ? "bg-[#3051a0] text-white" : ""
+          className={`rounded-full px-5 py-2 text-sm font-medium transition-all shadow-xs ${
+            category === ""
+              ? "bg-[#005dbd] text-white font-semibold border border-[#005dbd]"
+              : "bg-white text-[#102a43] border border-[#d6e0f0] hover:border-[#005dbd] hover:text-[#005dbd] hover:bg-[#f3f7ff]"
           }`}
         >
           All products
         </button>
 
-        {categories.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => applyCategory(item.slug)}
-            className={`glass-control rounded-full px-4 py-2 text-sm transition hover:bg-white ${
-              category === item.slug ? "bg-[#3051a0] text-white" : ""
-            }`}
-          >
-            {item.name}
-          </button>
-        ))}
+        {categories.map((item) => {
+          const isSelected = category === item.slug;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => applyCategory(item.slug)}
+              className={`rounded-full px-5 py-2 text-sm font-medium transition-all shadow-xs ${
+                isSelected
+                  ? "bg-[#005dbd] text-white font-semibold border border-[#005dbd]"
+                  : "bg-white text-[#102a43] border border-[#d6e0f0] hover:border-[#005dbd] hover:text-[#005dbd] hover:bg-[#f3f7ff]"
+              }`}
+            >
+              {item.name}
+            </button>
+          );
+        })}
       </div>
 
       <div className={`transition-opacity ${isPending ? "opacity-50" : "opacity-100"}`}>
@@ -175,7 +182,7 @@ export function ShopExplorer({
           </div>
         ) : (
           <div className="glass-panel rounded-2xl p-8">
-            <h2 className="text-xl font-semibold">No products found</h2>
+            <h2 className="text-xl font-semibold text-[#102a43]">No products found</h2>
             <p className="mt-2 text-[#334f6d]">
               Try another search or browse a category.
             </p>
@@ -186,7 +193,7 @@ export function ShopExplorer({
                 setCategory("");
                 setPage(1);
               }}
-              className="mt-5 inline-block font-semibold text-[#3051a0]"
+              className="mt-5 inline-block font-semibold text-[#005dbd] hover:underline"
             >
               Clear filters
             </button>
@@ -203,8 +210,10 @@ export function ShopExplorer({
             type="button"
             disabled={page <= 1}
             onClick={() => applyPage(page - 1)}
-            className={`rounded-full px-4 py-2 text-sm ${
-              page <= 1 ? "pointer-events-none opacity-40" : "glass-control"
+            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+              page <= 1
+                ? "pointer-events-none opacity-40 border border-[#d6e0f0] bg-white text-[#62809e]"
+                : "border border-[#d6e0f0] bg-white text-[#102a43] hover:border-[#005dbd] hover:text-[#005dbd] hover:bg-[#f3f7ff]"
             }`}
           >
             Previous
@@ -212,14 +221,17 @@ export function ShopExplorer({
 
           {Array.from({ length: Math.min(totalPages, 5) }, (_, index) => {
             const number = index + 1;
+            const isCurrent = number === page;
             return (
               <button
                 key={number}
                 type="button"
-                aria-current={number === page ? "page" : undefined}
+                aria-current={isCurrent ? "page" : undefined}
                 onClick={() => applyPage(number)}
-                className={`rounded-full px-4 py-2 text-sm ${
-                  number === page ? "bg-[#3051a0] text-white" : "glass-control"
+                className={`min-w-10 rounded-full px-4 py-2 text-sm font-medium transition ${
+                  isCurrent
+                    ? "bg-[#005dbd] text-white font-semibold border border-[#005dbd] shadow-sm"
+                    : "border border-[#d6e0f0] bg-white text-[#102a43] hover:border-[#005dbd] hover:text-[#005dbd] hover:bg-[#f3f7ff]"
                 }`}
               >
                 {number}
@@ -231,8 +243,10 @@ export function ShopExplorer({
             type="button"
             disabled={page >= totalPages}
             onClick={() => applyPage(page + 1)}
-            className={`rounded-full px-4 py-2 text-sm ${
-              page >= totalPages ? "pointer-events-none opacity-40" : "glass-control"
+            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+              page >= totalPages
+                ? "pointer-events-none opacity-40 border border-[#d6e0f0] bg-white text-[#62809e]"
+                : "border border-[#d6e0f0] bg-white text-[#102a43] hover:border-[#005dbd] hover:text-[#005dbd] hover:bg-[#f3f7ff]"
             }`}
           >
             Next

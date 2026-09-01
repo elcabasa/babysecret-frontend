@@ -34,8 +34,8 @@ export async function sendEmail({ to, subject, html, text }: SendArgs) {
         sender: sender(),
         to: [{ email: to }],
         subject,
-        html,
-        text,
+        htmlContent: html,
+        textContent: text,
       }),
     });
 

@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { ChevronDown, LogOut, Package, User2 } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useState } from "react";
-
-import { logoutAction } from "@/lib/auth.actions";
+import { useCartStore } from "@/store/cart.store";
+import { useWishlistStore } from "@/store/wishlist.store";
 
 export function AccountMenu() {
   const { data: session, status } = useSession();
@@ -67,15 +67,21 @@ export function AccountMenu() {
             <User2 size={16} className="text-[#3051a0]" />
             My Account
           </Link>
-          <form action={logoutAction} className="mt-1 border-t border-[#e6edf7] pt-1">
+          <div className="mt-1 border-t border-[#e6edf7] pt-1">
             <button
-              type="submit"
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                useCartStore.getState().clearCart();
+                useWishlistStore.getState().clearWishlist();
+                signOut({ callbackUrl: "/login" });
+              }}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-700 transition hover:bg-red-50"
             >
               <LogOut size={16} />
               Sign out
             </button>
-          </form>
+          </div>
         </div>
       )}
     </div>

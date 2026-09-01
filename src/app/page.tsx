@@ -9,7 +9,7 @@ import { Footer } from "@/components/layout/footer";
 
 const heroImage = "/hero-scene.png";
 const brandStoryImage = "/brand-story.png";
-const brandStoryOverlay = "/about-us-bg.png";
+const brandStoryOverlay = "";
 
 const benefits = [
   { 
