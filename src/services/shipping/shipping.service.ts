@@ -6,6 +6,7 @@ import type {
 } from "@/types/shipping";
 import { TerminalShipProvider } from "@/services/shipping/tship.service";
 import { WooCommerceShippingProvider } from "@/services/shipping/woocommerce.service";
+import { ShipbubbleShippingProvider } from "@/services/shipping/shipbubble.service";
 
 const zones: Record<string, string[]> = {
   lagos: ["Lagos"],
@@ -103,20 +104,25 @@ class MockShippingProvider implements ShippingProvider {
   }
 }
 
-export function getShippingProviderName(): "tship" | "mock" | "woocommerce" {
+export function getShippingProviderName(): "tship" | "shipbubble" | "mock" | "woocommerce" {
   const provider = process.env.SHIPPING_PROVIDER;
   if (provider === "tship") return "tship";
+  if (provider === "shipbubble") return "shipbubble";
   if (provider === "woocommerce") return "woocommerce";
   return "mock";
 }
 
 export function getShippingProvider(
-  providerName?: "tship" | "mock" | "woocommerce"
+  providerName?: "tship" | "shipbubble" | "mock" | "woocommerce"
 ): ShippingProvider {
   const provider = providerName || getShippingProviderName();
 
   if (provider === "tship") {
     return new TerminalShipProvider();
+  }
+
+  if (provider === "shipbubble") {
+    return new ShipbubbleShippingProvider();
   }
 
   if (provider === "woocommerce") {

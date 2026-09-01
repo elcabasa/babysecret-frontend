@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { auth } from "@/auth";
 import { getPaymentProvider } from "@/services/payment/payment.service";
 import { toFormBody } from "@/lib/woocommerce-auth";
 import { getDeliveryQuotes, getShippingProviderName } from "@/services/shipping/shipping.service";
@@ -180,14 +181,21 @@ console.log(
      */
     const reference = `babysecret-${Date.now()}`;
 
-    const auth = Buffer.from(
+    const wooAuth = Buffer.from(
       `${consumerKey}:${consumerSecret}`
     ).toString("base64");
 
     /*
      * Create the WooCommerce order.
+     *
+     * When an authenticated customer places the order, link it to their
+     * WooCommerce customer id — read server-side from the NextAuth session, so
+     * the browser can never choose which customer an order is attributed to.
+     * Guest checkouts stay unlinked (order.customer_id = 0).
      */
+    const session = await auth();
     const orderBody = toFormBody({
+      customer_id: session?.user?.id ? Number(session.user.id) : undefined,
       payment_method: "paystack",
       payment_method_title: "Paystack",
       set_paid: false,
@@ -222,7 +230,9 @@ console.log(
               method_id:
                 getShippingProviderName() === "tship"
                   ? "terminal_tship"
-                  : delivery.rateId,
+                  : getShippingProviderName() === "shipbubble"
+                    ? "shipbubble_default"
+                    : delivery.rateId,
               method_title: delivery.carrier,
               total: String(delivery.amount),
             },
@@ -245,7 +255,15 @@ console.log(
               { key: "_babysecret_tship_service", value: delivery.service ?? "" },
               { key: "_babysecret_tship_amount", value: String(delivery.amount) },
             ]
-          : []),
+          : delivery &&
+              getShippingProviderName() === "shipbubble"
+            ? [
+                { key: "_babysecret_shipbubble_rate_id", value: delivery.rateId },
+                { key: "_babysecret_shipbubble_carrier", value: delivery.carrier },
+                { key: "_babysecret_shipbubble_service", value: delivery.service ?? "" },
+                { key: "_babysecret_shipbubble_amount", value: String(delivery.amount) },
+              ]
+            : []),
       ],
     });
 
@@ -253,7 +271,7 @@ console.log(
       method: "POST",
 
       headers: {
-        Authorization: `Basic ${auth}`,
+        Authorization: `Basic ${wooAuth}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
 

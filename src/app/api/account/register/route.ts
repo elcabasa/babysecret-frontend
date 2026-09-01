@@ -65,8 +65,13 @@ export async function POST(request: Request) {
     });
 
     const code = generateOtp();
-    storeOtp(normalized, code, Number(user.id));
-    await sendOtpEmail(normalized, code);
+    await storeOtp(normalized, code, Number(user.id));
+
+    try {
+      await sendOtpEmail(normalized, code);
+    } catch (error) {
+      console.error("Register: OTP email send failed:", error);
+    }
 
     return NextResponse.json({ success: true, email: normalized });
   } catch (error) {
