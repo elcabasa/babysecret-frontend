@@ -8,6 +8,7 @@ type CartState = {
   items: CartItem[];
   hasHydrated: boolean;
   setHasHydrated: (value: boolean) => void;
+  setItems: (items: CartItem[]) => void;
   addItem: (item: CartItemInput) => void;
   removeItem: (productId: string, variantId?: string) => void;
   updateQuantity: (productId: string, quantity: number, variantId?: string) => void;
@@ -22,6 +23,7 @@ export const useCartStore = create<CartState>()(persist((set) => ({
   items: [],
   hasHydrated: false,
   setHasHydrated: (value) => set({ hasHydrated: value }),
+  setItems: (items) => set({ items }),
   addItem: (input) => set((state) => {
     const quantity = Number.isFinite(input.quantity) ? Math.max(1, Math.floor(input.quantity ?? 1)) : 1;
     const existing = state.items.find((item) => matches(item, input.productId, input.variantId));

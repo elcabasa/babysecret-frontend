@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
 
-import { loginAction } from "@/lib/auth.actions";
 import { GoogleButton } from "./google-button";
 
 const errorMessages: Record<string, string> = {
+  CredentialsSignin: "Invalid email or password.",
   ACCOUNT_PASSWORD_COLLISION:
     "This email is registered with a password. Please sign in with your email and password.",
   OAuthAccountNotLinked:
@@ -20,7 +21,7 @@ const errorMessages: Record<string, string> = {
   OAuthCreateAccount:
     "We could not create an account with Google. Please try again.",
   Verification: "Sign-in is temporarily unavailable. Please try again.",
-  Default: "Something went wrong. Please try again.",
+  Default: "Invalid email or password.",
 };
 
 export function LoginForm({
@@ -30,13 +31,43 @@ export function LoginForm({
   error?: string;
   googleEnabled?: boolean;
 }) {
-  const [state, formAction, pending] = useActionState<
-    { error?: string },
-    FormData
-  >(loginAction, {});
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setErrorMessage(null);
+    setPending(true);
+
+    try {
+      const res = await signIn("credentials", {
+        email: email.trim().toLowerCase(),
+        password,
+        redirect: false,
+      });
+
+      if (!res?.ok || res?.error) {
+        setPending(false);
+        setErrorMessage(
+          res?.error && errorMessages[res.error]
+            ? errorMessages[res.error]
+            : "Invalid email or password."
+        );
+        return;
+      }
+
+      // Hard navigation ensures server components and client context fully reload with the new session
+      window.location.href = "/?auth_success=" + encodeURIComponent("Welcome back!");
+    } catch {
+      setPending(false);
+      setErrorMessage("Something went wrong. Please try again.");
+    }
+  }
 
   const message =
-    state?.error ??
+    errorMessage ??
     (error ? (errorMessages[error] ?? errorMessages.Default) : null);
 
   return (
@@ -47,12 +78,14 @@ export function LoginForm({
         </p>
       )}
 
-      <form action={formAction} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm font-medium text-[#102a43]">
           Email
           <input
             name="email"
             type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
             className="rounded-xl border border-[#d6e0f0] bg-white px-4 py-3 outline-none focus:border-[#3051a0]"
@@ -64,6 +97,8 @@ export function LoginForm({
           <input
             name="password"
             type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
             className="rounded-xl border border-[#d6e0f0] bg-white px-4 py-3 outline-none focus:border-[#3051a0]"

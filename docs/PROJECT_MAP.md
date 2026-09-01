@@ -28,17 +28,17 @@ The current catalog includes products such as baby wipes, sanitizing wipes, baby
 
 Verified public content routes include:
 
-| Route | Current reference |
-| --- | --- |
-| `/` | Home |
-| `/shop` | Shop |
-| `/product/[slug]` | WooCommerce product detail pattern |
-| `/cart` | Cart |
-| `/checkout` | Checkout |
-| `/my-account` | Account |
-| `/about-us` | About |
-| `/contact-us` | Contact |
-| `/secret-keeper-blog` | Secret Keeper Blog |
+| Route                 | Current reference                  |
+| --------------------- | ---------------------------------- |
+| `/`                   | Home                               |
+| `/shop`               | Shop                               |
+| `/product/[slug]`     | WooCommerce product detail pattern |
+| `/cart`               | Cart                               |
+| `/checkout`           | Checkout                           |
+| `/my-account`         | Account                            |
+| `/about-us`           | About                              |
+| `/contact-us`         | Contact                            |
+| `/secret-keeper-blog` | Secret Keeper Blog                 |
 
 FAQ, shipping, returns, distributor, wishlist, order-confirmation, and auth routes remain planned UI routes. Their final inclusion and content should follow the Figma/business requirements, with configurable placeholder policy copy where business policy is not confirmed.
 

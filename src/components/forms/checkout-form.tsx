@@ -293,8 +293,7 @@ export function CheckoutForm() {
     options: string[],
     onChange: (value: string) => void,
     placeholder = `Select ${label.toLowerCase()}`,
-    wide = false,
-    resetKey?: string
+    wide = false
   ) => (
     <label
       className={`grid gap-2 text-sm ${
@@ -306,8 +305,7 @@ export function CheckoutForm() {
 
       <select
         id={name}
-        key={resetKey}
-        defaultValue=""
+        value={watched[name] ?? ""}
         onChange={(event) => {
           setValue(name, event.target.value, { shouldValidate: true });
           onChange(event.target.value);
@@ -359,7 +357,7 @@ export function CheckoutForm() {
         : field("state", "State")}
 
       {isNigeria
-        ? selectField("city", "City", cityOptions, () => undefined, undefined, false, watched.state)
+        ? selectField("city", "City", cityOptions, () => undefined)
         : field("city", "City")}
 
       {field("address", "Street address", "text", true)}

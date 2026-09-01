@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { Header } from "@/components/layout/header";
 import { auth } from "@/auth";
-import { logoutAction } from "@/lib/auth.actions";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 
 export default async function AccountPage() {
   const session = await auth();
@@ -70,14 +70,7 @@ export default async function AccountPage() {
             >
               My Orders
             </Link>
-            <form action={logoutAction}>
-              <button
-                type="submit"
-                className="rounded-full border border-[#d6e0f0] bg-white px-5 py-3 text-sm font-semibold text-[#102a43] transition hover:bg-[#f3f7ff]"
-              >
-                Sign out
-              </button>
-            </form>
+            <SignOutButton />
           </div>
         </div>
       </div>

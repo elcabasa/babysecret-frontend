@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { siteConfig } from "@/data/site";
 import { Providers } from "@/components/auth/session-provider";
+import { auth } from "@/auth";
+import { UserDataSync } from "@/components/auth/user-data-sync";
 
 type RootLayoutProps = Readonly<{
   children: React.ReactNode;
@@ -18,14 +20,19 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: "Baby Secret | Gentle care for little ones", description: "Explore Baby Secret care products for babies and families." },
 };
 
-export default function RootLayout({ children }: RootLayoutProps) {
+export default async function RootLayout({ children }: RootLayoutProps) {
+  const session = await auth();
+
   return (
     <html
       lang="en"
       className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col">
-        <Providers>{children}</Providers>
+        <Providers session={session}>
+          <UserDataSync />
+          {children}
+        </Providers>
       </body>
     </html>
   );
