@@ -58,8 +58,8 @@ export function LoginForm({
         return;
       }
 
-      // Hard navigation ensures server components and client context fully reload with the new session
-      window.location.href = "/?auth_success=" + encodeURIComponent("Welcome back!");
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.href = `${window.location.origin}/?auth_success=${encodeURIComponent("Welcome back!")}`;
     } catch {
       setPending(false);
       setErrorMessage("Something went wrong. Please try again.");

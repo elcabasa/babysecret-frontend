@@ -14,8 +14,6 @@ export function SortSelect({ value }: SortSelectProps) {
   ) {
     const sort = event.target.value;
 
-    console.log("Selected sort:", sort);
-
     if (sort === "featured") {
       router.push("/shop");
     } else {

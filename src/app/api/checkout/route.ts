@@ -90,39 +90,32 @@ async function verifyDeliveryQuote(
   };
 }
 
+function buildOrderMeta(
+  reference: string,
+  delivery: CheckoutDelivery | null
+): { key: string; value: string }[] {
+  if (!delivery) {
+    return [{ key: "_babysecret_paystack_reference", value: reference }];
+  }
+
+  const provider = getShippingProviderName();
+  const prefix =
+    provider === "tship"
+      ? "_babysecret_tship"
+      : provider === "shipbubble"
+        ? "_babysecret_shipbubble"
+        : "_babysecret_shipping";
+
+  return [
+    { key: "_babysecret_paystack_reference", value: reference },
+    { key: `${prefix}_rate_id`, value: delivery.rateId },
+    { key: `${prefix}_carrier`, value: delivery.carrier },
+    { key: `${prefix}_service`, value: delivery.service ?? "" },
+    { key: `${prefix}_amount`, value: String(delivery.amount) },
+  ];
+}
+
 export async function POST(request: Request) {
-  console.log("Environment:", process.env.NODE_ENV);
-console.log("Provider value:", JSON.stringify(process.env.PAYMENT_PROVIDER));
-console.log(
-  "All payment-related env keys:",
-  Object.keys(process.env).filter((key) =>
-    key.includes("PAYMENT") || key.includes("PAYSTACK")
-  )
-);
-
-  console.log("=== CHECKOUT ENVIRONMENT TEST ===");
-
-  console.log(
-    "Payment provider:",
-    process.env.PAYMENT_PROVIDER
-  );
-
-  console.log(
-    "Paystack key exists:",
-    Boolean(process.env.PAYSTACK_SECRET_KEY)
-  );
-
-  console.log(
-    "WooCommerce URL exists:",
-    Boolean(process.env.WOOCOMMERCE_REST_URL)
-  );
-
-  console.log(
-    "WooCommerce key exists:",
-    Boolean(process.env.WOOCOMMERCE_CONSUMER_KEY)
-  );
-
-
   try {
     const body = await request.json();
 
@@ -138,9 +131,9 @@ console.log(
       );
     }
 
-   const { customer, items } = parsed.data;
+    const { customer, items } = parsed.data;
 
-   let delivery = parsed.data.delivery ?? null;
+    let delivery = parsed.data.delivery ?? null;
 
     if (delivery) {
       const verified = await verifyDeliveryQuote(delivery, customer, items);
@@ -238,33 +231,7 @@ console.log(
             },
           ]
         : [],
-      meta_data: [
-        { key: "_babysecret_paystack_reference", value: reference },
-        ...(delivery
-          ? [
-              { key: "_babysecret_shipping_rate_id", value: delivery.rateId },
-              { key: "_babysecret_shipping_carrier", value: delivery.carrier },
-              { key: "_babysecret_shipping_service", value: delivery.service ?? "" },
-              { key: "_babysecret_shipping_amount", value: String(delivery.amount) },
-            ]
-          : []),
-        ...(delivery && getShippingProviderName() === "tship"
-          ? [
-              { key: "_babysecret_tship_rate_id", value: delivery.rateId },
-              { key: "_babysecret_tship_carrier", value: delivery.carrier },
-              { key: "_babysecret_tship_service", value: delivery.service ?? "" },
-              { key: "_babysecret_tship_amount", value: String(delivery.amount) },
-            ]
-          : delivery &&
-              getShippingProviderName() === "shipbubble"
-            ? [
-                { key: "_babysecret_shipbubble_rate_id", value: delivery.rateId },
-                { key: "_babysecret_shipbubble_carrier", value: delivery.carrier },
-                { key: "_babysecret_shipbubble_service", value: delivery.service ?? "" },
-                { key: "_babysecret_shipbubble_amount", value: String(delivery.amount) },
-              ]
-            : []),
-      ],
+      meta_data: buildOrderMeta(reference, delivery),
     });
 
     const wooResponse = await fetch(`${wooUrl}/orders`, {
@@ -309,36 +276,30 @@ console.log(
       );
     }
 
-    /*
-     * Initialize Paystack.
-     */
-   const appUrl =
-  process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-const callbackUrl =
-  `${appUrl}/api/payment/verify?reference=${encodeURIComponent(reference)}`;
+    const callbackUrl = `${appUrl}/api/payment/verify?reference=${encodeURIComponent(reference)}`;
 
-const paymentProvider = getPaymentProvider();
+    const paymentProvider = getPaymentProvider();
 
-const payment = await paymentProvider.initializePayment({
-  email: customer.email,
-  amount: orderTotal,
-  reference,
-  callbackUrl,
-  customerName: `${customer.firstName} ${customer.lastName}`,
-  phoneNumber: customer.phone,
-});
-if (
-  payment.status !== "initialized" ||
-  !payment.authorizationUrl
-) {
-  return NextResponse.json(
-    {
-      message: "Could not initialize payment. Check the server logs.",
-    },
-    { status: 500 }
-  );
-}
+    const payment = await paymentProvider.initializePayment({
+      email: customer.email,
+      amount: orderTotal,
+      reference,
+      callbackUrl,
+      customerName: `${customer.firstName} ${customer.lastName}`,
+      phoneNumber: customer.phone,
+    });
+
+    if (payment.status !== "initialized" || !payment.authorizationUrl) {
+      return NextResponse.json(
+        {
+          message: "Could not initialize payment. Check the server logs.",
+        },
+        { status: 500 }
+      );
+    }
 
     /*
      * Return the Paystack URL to the frontend.
@@ -353,18 +314,18 @@ if (
       authorizationUrl: payment.authorizationUrl,
     });
   } catch (error) {
-  console.error("Checkout error:", error);
+    console.error("Checkout error:", error);
 
-  const message =
-    error instanceof Error
-      ? error.message
-      : "Something went wrong while processing checkout.";
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Something went wrong while processing checkout.";
 
-  return NextResponse.json(
-    {
-      message,
-    },
-    { status: 500 }
-  );
-}
+    return NextResponse.json(
+      {
+        message,
+      },
+      { status: 500 }
+    );
+  }
 }
