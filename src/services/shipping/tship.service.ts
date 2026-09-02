@@ -6,7 +6,8 @@ import type {
   ShippingProvider,
 } from "@/types/shipping";
 
-const apiBase = process.env.TERMINAL_API_BASE ?? "https://api.terminal.africa/v1";
+const apiBase =
+  process.env.TERMINAL_API_BASE ?? "https://api.terminal.africa/v1";
 const apiKey = process.env.TERMINAL_API_KEY;
 
 const pickupDefaults = {
@@ -22,7 +23,7 @@ const pickupDefaults = {
 };
 
 export const defaultItemWeightKg = Number(
-  process.env.SHIPPING_ITEM_WEIGHT_KG ?? 0.4
+  process.env.SHIPPING_ITEM_WEIGHT_KG ?? 0.4,
 );
 
 const countryCodes: Record<string, string> = {
@@ -147,7 +148,8 @@ export class TerminalShipProvider implements ShippingProvider {
 
     if (!response.ok || result.status !== true) {
       throw new Error(
-        (result?.message as string | undefined) ?? "Could not fetch delivery rates."
+        (result?.message as string | undefined) ??
+          "Could not fetch delivery rates.",
       );
     }
 
@@ -194,7 +196,8 @@ export class TerminalShipProvider implements ShippingProvider {
 
     if (!response.ok || result.status !== true) {
       throw new Error(
-        (result?.message as string | undefined) ?? "Could not arrange your delivery."
+        (result?.message as string | undefined) ??
+          "Could not arrange your delivery.",
       );
     }
 

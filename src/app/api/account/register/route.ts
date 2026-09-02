@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import {
-  createWooCustomer,
-  getCustomerByEmail,
-} from "@/lib/woocommerce-auth";
+import { createWooCustomer, getCustomerByEmail } from "@/lib/woocommerce-auth";
 import { generateOtp, storeOtp } from "@/lib/otp-store";
 import { sendOtpEmail } from "@/lib/email";
 
@@ -24,7 +21,7 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { message: "Please check your details and try again." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -34,7 +31,7 @@ export async function POST(request: Request) {
     const existing = await getCustomerByEmail(normalized);
     if (existing) {
       const provider = existing.meta_data?.find(
-        (meta) => meta.key === "auth_provider"
+        (meta) => meta.key === "auth_provider",
       )?.value;
 
       if (provider === "google") {
@@ -44,13 +41,13 @@ export async function POST(request: Request) {
               "You already registered with Google. Please sign in with Google.",
             code: "GOOGLE_ACCOUNT",
           },
-          { status: 409 }
+          { status: 409 },
         );
       }
 
       return NextResponse.json(
         { message: "An account with this email already exists." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -78,7 +75,7 @@ export async function POST(request: Request) {
     console.error("Register error:", error);
     return NextResponse.json(
       { message: "Could not create your account." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

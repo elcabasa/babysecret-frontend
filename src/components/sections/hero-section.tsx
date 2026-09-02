@@ -35,7 +35,9 @@ export function HeroSection({ authSuccess }: { authSuccess?: string }) {
             Gentle care for every little moment.
           </h1>
           <p className="mt-6 max-w-[688px] text-base leading-7 text-[#161616] sm:text-xl">
-            From first baths to bedtime cuddles, Baby Secret helps you care for your little one’s delicate skin with products made for everyday tenderness.
+            From first baths to bedtime cuddles, Baby Secret helps you care for
+            your little one’s delicate skin with products made for everyday
+            tenderness.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link

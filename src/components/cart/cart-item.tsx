@@ -60,7 +60,9 @@ export function CartItem({ item }: { item: CartItemType }) {
             <div className="flex items-center rounded-full border border-[#e5e3e3]">
               <button
                 type="button"
-                onClick={() => decrementQuantity(item.productId, item.variantId)}
+                onClick={() =>
+                  decrementQuantity(item.productId, item.variantId)
+                }
                 className="grid size-8 place-items-center"
                 aria-label={`Decrease ${item.name} quantity`}
               >
@@ -69,7 +71,9 @@ export function CartItem({ item }: { item: CartItemType }) {
               <span className="w-8 text-center text-sm">{item.quantity}</span>
               <button
                 type="button"
-                onClick={() => incrementQuantity(item.productId, item.variantId)}
+                onClick={() =>
+                  incrementQuantity(item.productId, item.variantId)
+                }
                 className="grid size-8 place-items-center"
                 aria-label={`Increase ${item.name} quantity`}
               >

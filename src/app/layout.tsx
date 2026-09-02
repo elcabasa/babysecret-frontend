@@ -16,18 +16,24 @@ export const metadata: Metadata = {
   },
   description: "Explore Baby Secret care products for babies and families.",
   metadataBase: new URL(siteConfig.url),
-  openGraph: { type: "website", siteName: siteConfig.name, title: "Baby Secret | Gentle care for little ones", description: "Explore Baby Secret care products for babies and families." },
-  twitter: { card: "summary_large_image", title: "Baby Secret | Gentle care for little ones", description: "Explore Baby Secret care products for babies and families." },
+  openGraph: {
+    type: "website",
+    siteName: siteConfig.name,
+    title: "Baby Secret | Gentle care for little ones",
+    description: "Explore Baby Secret care products for babies and families.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Baby Secret | Gentle care for little ones",
+    description: "Explore Baby Secret care products for babies and families.",
+  },
 };
 
 export default async function RootLayout({ children }: RootLayoutProps) {
   const session = await auth();
 
   return (
-    <html
-      lang="en"
-      className="h-full antialiased"
-    >
+    <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         <Providers session={session}>
           <UserDataSync />

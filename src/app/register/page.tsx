@@ -1,8 +1,7 @@
 import { Header } from "@/components/layout/header";
 import { RegisterForm } from "@/components/auth/register-form";
 
-const googleEnabled =
-  process.env.NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED === "true";
+const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED === "true";
 
 export default function RegisterPage() {
   return (

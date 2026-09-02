@@ -17,7 +17,7 @@ export function getShippingProviderName(): ShippingProviderName {
 }
 
 export function getShippingProvider(
-  providerName?: ShippingProviderName
+  providerName?: ShippingProviderName,
 ): ShippingProvider {
   const provider = providerName ?? getShippingProviderName();
 
@@ -33,7 +33,7 @@ export function getShippingProvider(
 }
 
 export async function getDeliveryQuotes(
-  input: DeliveryQuoteInput
+  input: DeliveryQuoteInput,
 ): Promise<DeliveryQuote[]> {
   const providerName = getShippingProviderName();
 

@@ -29,7 +29,9 @@ function formHeader(): Record<string, string> {
 function appendForm(params: URLSearchParams, key: string, value: unknown) {
   if (value === undefined || value === null) return;
   if (Array.isArray(value)) {
-    value.forEach((item, index) => appendForm(params, `${key}[${index}]`, item));
+    value.forEach((item, index) =>
+      appendForm(params, `${key}[${index}]`, item),
+    );
   } else if (typeof value === "object") {
     for (const [subKey, subValue] of Object.entries(value)) {
       appendForm(params, `${key}[${subKey}]`, subValue);
@@ -130,12 +132,12 @@ export function mapWooCustomer(customer: WooCustomer): User {
 }
 
 export async function getCustomerByEmail(
-  email: string
+  email: string,
 ): Promise<WooCustomer | null> {
   try {
     const response = await fetch(
       `${restUrl}/customers?email=${encodeURIComponent(email)}&per_page=1`,
-      { headers: authHeader(), cache: "no-store" }
+      { headers: authHeader(), cache: "no-store" },
     );
 
     if (!response.ok) return null;
@@ -148,7 +150,7 @@ export async function getCustomerByEmail(
 }
 
 export async function getCustomerById(
-  id: number | string
+  id: number | string,
 ): Promise<WooCustomer | null> {
   try {
     const response = await fetch(`${restUrl}/customers/${id}`, {
@@ -183,9 +185,12 @@ export class WooCommerceAuthError extends Error {
 
 export async function authenticateWooCommerce(
   email: string,
-  password: string
+  password: string,
 ): Promise<{ token: string; user: User }> {
-  const tokenBody = new URLSearchParams({ username: email, password: password });
+  const tokenBody = new URLSearchParams({
+    username: email,
+    password: password,
+  });
 
   let tokenResponse: Response;
   try {
@@ -199,7 +204,7 @@ export async function authenticateWooCommerce(
     console.error("[auth] jwt-auth network error:", error);
     throw new WooCommerceAuthError(
       "AUTH_NETWORK_ERROR",
-      "We could not reach the store right now."
+      "We could not reach the store right now.",
     );
   }
 
@@ -212,43 +217,43 @@ export async function authenticateWooCommerce(
 
   if (!tokenResponse.ok) {
     console.error(
-      `[auth] jwt-auth failed status=${tokenResponse.status} code=${tokenData.code ?? ""} message=${tokenData.message ?? ""}`
+      `[auth] jwt-auth failed status=${tokenResponse.status} code=${tokenData.code ?? ""} message=${tokenData.message ?? ""}`,
     );
 
     if (tokenResponse.status === 404) {
       throw new WooCommerceAuthError(
         "AUTH_ENDPOINT_NOT_FOUND",
-        "The store sign-in service is not available."
+        "The store sign-in service is not available.",
       );
     }
 
     if (tokenResponse.status >= 500) {
       throw new WooCommerceAuthError(
         "AUTH_SERVER_ERROR",
-        "The store sign-in service is not available."
+        "The store sign-in service is not available.",
       );
     }
 
     if (tokenResponse.status === 403) {
       throw new WooCommerceAuthError(
         "INVALID_CREDENTIALS",
-        "Invalid email or password."
+        "Invalid email or password.",
       );
     }
 
     throw new WooCommerceAuthError(
       "AUTH_SERVICE_ERROR",
-      "We could not sign you in right now."
+      "We could not sign you in right now.",
     );
   }
 
   if (!tokenData.token) {
     console.error(
-      `[auth] jwt-auth returned no token body=${JSON.stringify(tokenData)}`
+      `[auth] jwt-auth returned no token body=${JSON.stringify(tokenData)}`,
     );
     throw new WooCommerceAuthError(
       "AUTH_SERVICE_ERROR",
-      "The store sign-in service is not available."
+      "The store sign-in service is not available.",
     );
   }
 
@@ -257,7 +262,7 @@ export async function authenticateWooCommerce(
   if (!customer) {
     throw new WooCommerceAuthError(
       "ACCOUNT_NOT_FOUND",
-      "No account was found for this email."
+      "No account was found for this email.",
     );
   }
 
@@ -265,7 +270,7 @@ export async function authenticateWooCommerce(
 }
 
 export async function createWooCustomer(
-  input: CreateCustomerInput
+  input: CreateCustomerInput,
 ): Promise<User> {
   const body = toFormBody({
     email: input.email,
@@ -306,7 +311,7 @@ export async function createWooCustomer(
 
 export async function updateWooCustomer(
   id: number | string,
-  fields: Record<string, unknown>
+  fields: Record<string, unknown>,
 ): Promise<User> {
   const response = await fetch(`${restUrl}/customers/${id}`, {
     method: "PUT",
@@ -325,14 +330,14 @@ export async function updateWooCustomer(
 
 export async function setWooCustomerPassword(
   id: number | string,
-  password: string
+  password: string,
 ): Promise<void> {
   await updateWooCustomer(id, { password });
 }
 
 export async function setEmailVerified(
   id: number | string,
-  verified = true
+  verified = true,
 ): Promise<void> {
   await updateWooCustomer(id, {
     meta_data: [{ key: "email_verified", value: verified ? "true" : "false" }],
@@ -341,7 +346,7 @@ export async function setEmailVerified(
 
 export async function updateCustomerMeta(
   id: number | string,
-  entries: { key: string; value: string | number | boolean }[]
+  entries: { key: string; value: string | number | boolean }[],
 ): Promise<void> {
   await updateWooCustomer(id, {
     meta_data: entries.map((entry) => ({

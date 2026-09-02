@@ -12,10 +12,8 @@ const errorMessages: Record<string, string> = {
     "This email is registered with a password. Please sign in with your email and password.",
   OAuthAccountNotLinked:
     "This email is registered with a password. Please sign in with your email and password.",
-  AccessDenied:
-    "That sign-in could not be completed. Please try again.",
-  Configuration:
-    "Sign-in is temporarily unavailable. Please try again.",
+  AccessDenied: "That sign-in could not be completed. Please try again.",
+  Configuration: "Sign-in is temporarily unavailable. Please try again.",
   OAuthSignin: "Google sign-in is temporarily unavailable.",
   OAuthCallback: "Google sign-in could not be completed. Please try again.",
   OAuthCreateAccount:
@@ -53,7 +51,7 @@ export function LoginForm({
         setErrorMessage(
           res?.error && errorMessages[res.error]
             ? errorMessages[res.error]
-            : "Invalid email or password."
+            : "Invalid email or password.",
         );
         return;
       }
@@ -127,7 +125,10 @@ export function LoginForm({
       )}
 
       <div className="mt-2 flex items-center justify-between text-sm">
-        <Link href="/forgot-password" className="text-[#3051a0] hover:underline">
+        <Link
+          href="/forgot-password"
+          className="text-[#3051a0] hover:underline"
+        >
           Forgot password?
         </Link>
         <Link href="/register" className="text-[#3051a0] hover:underline">

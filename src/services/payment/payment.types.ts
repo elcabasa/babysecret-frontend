@@ -19,12 +19,10 @@ export interface PaymentVerificationResult {
 }
 
 export interface PaymentProvider {
-  initializePayment(
-    input: PaymentInput
-  ): Promise<PaymentInitializationResult>;
+  initializePayment(input: PaymentInput): Promise<PaymentInitializationResult>;
 
   verifyPayment(
     reference: string,
-    transactionId?: string
+    transactionId?: string,
   ): Promise<PaymentVerificationResult>;
 }

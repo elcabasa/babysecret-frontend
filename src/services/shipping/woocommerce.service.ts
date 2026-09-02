@@ -47,9 +47,9 @@ function extractCartToken(response: Response): string | undefined {
   const header = response.headers.get("cart-token");
   if (header) return header;
 
-  const setCookies = response.headers.getSetCookie?.() ?? [
-    response.headers.get("set-cookie"),
-  ].filter(Boolean) as string[];
+  const setCookies =
+    response.headers.getSetCookie?.() ??
+    ([response.headers.get("set-cookie")].filter(Boolean) as string[]);
 
   for (const cookie of setCookies) {
     const match = cookie.match(/(wc_cart_created_[^=]+)=([^;]+)/);
@@ -79,14 +79,14 @@ export class WooCommerceShippingProvider implements ShippingProvider {
   async getQuotes(input: DeliveryQuoteInput): Promise<DeliveryQuote[]> {
     if (!storeUrl) {
       throw new Error(
-        "WooCommerce Store API URL is not configured (NEXT_PUBLIC_WOOCOMMERCE_STORE_API_URL)."
+        "WooCommerce Store API URL is not configured (NEXT_PUBLIC_WOOCOMMERCE_STORE_API_URL).",
       );
     }
 
     const items = input.items.filter((item) => item.id);
     if (items.length === 0) {
       throw new Error(
-        "Cannot calculate delivery through WooCommerce without product IDs."
+        "Cannot calculate delivery through WooCommerce without product IDs.",
       );
     }
 
@@ -116,7 +116,7 @@ export class WooCommerceShippingProvider implements ShippingProvider {
         const detail = await added.json().catch(() => null);
         throw new Error(
           (detail as { message?: string } | null)?.message ??
-            `"${item.name}" could not be added for delivery.`
+            `"${item.name}" could not be added for delivery.`,
         );
       }
       token = extractCartToken(added) ?? token;
@@ -138,7 +138,7 @@ export class WooCommerceShippingProvider implements ShippingProvider {
       const detail = await updated.json().catch(() => null);
       throw new Error(
         (detail as { message?: string } | null)?.message ??
-          "Could not calculate delivery for your address."
+          "Could not calculate delivery for your address.",
       );
     }
 
@@ -147,7 +147,7 @@ export class WooCommerceShippingProvider implements ShippingProvider {
     const currency = cart.totals?.currency_code ?? "NGN";
 
     const rates = (cart.shipping_rates ?? []).flatMap(
-      (pkg) => pkg.shipping_rates ?? []
+      (pkg) => pkg.shipping_rates ?? [],
     );
 
     const quotes = rates

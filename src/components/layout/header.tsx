@@ -23,7 +23,7 @@ export function Header() {
   const accountHref = signedIn ? "/account" : "/login";
   const accountLabel = signedIn ? "My Account" : "Sign in";
   const wishlistCount = useWishlistStore((state) =>
-    state.hasHydrated ? state.items.length : 0
+    state.hasHydrated ? state.items.length : 0,
   );
 
   return (
@@ -53,7 +53,9 @@ export function Header() {
           >
             <ShoppingCart
               size={18}
-              className={pathname === "/cart" ? "text-[#005dbd]" : "text-[#3051a0]"}
+              className={
+                pathname === "/cart" ? "text-[#005dbd]" : "text-[#3051a0]"
+              }
             />
             <CartCount />
           </Link>
@@ -69,7 +71,9 @@ export function Header() {
           >
             <Heart
               size={18}
-              className={pathname === "/wishlist" ? "text-[#005dbd]" : "text-[#3051a0]"}
+              className={
+                pathname === "/wishlist" ? "text-[#005dbd]" : "text-[#3051a0]"
+              }
             />
             {wishlistCount > 0 && (
               <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-[#005dbd] px-1 text-[10px] font-bold text-white">

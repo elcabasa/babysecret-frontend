@@ -3,7 +3,8 @@
 import { create } from "zustand";
 import type { DeliveryQuote } from "@/types/shipping";
 
-export type DeliveryStatus = "idle" | "loading" | "ready" | "error" | "unavailable";
+export type DeliveryStatus =
+  "idle" | "loading" | "ready" | "error" | "unavailable";
 
 type DeliveryState = {
   quotes: DeliveryQuote[];
@@ -32,7 +33,8 @@ export const useDeliveryStore = create<DeliveryState>()((set) => ({
     }),
   selectRate: (rateId) => set({ selectedRateId: rateId }),
   setError: (error) => set({ error, status: "error", quotes: [] }),
-  reset: () => set({ quotes: [], selectedRateId: null, status: "idle", error: "" }),
+  reset: () =>
+    set({ quotes: [], selectedRateId: null, status: "idle", error: "" }),
 }));
 
 export const selectSelectedQuote = (state: DeliveryState) =>

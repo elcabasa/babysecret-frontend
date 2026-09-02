@@ -20,7 +20,8 @@ import type {
  * can reconstruct them later without changing the ShippingProvider interface.
  */
 
-const apiBase = process.env.SHIPPUBBLE_API_BASE ?? "https://api.shipbubble.com/v1";
+const apiBase =
+  process.env.SHIPPUBBLE_API_BASE ?? "https://api.shipbubble.com/v1";
 const apiKey = process.env.SHIPPUBBLE_API_KEY;
 
 const pickupDefaults = {
@@ -122,7 +123,7 @@ async function validateAddress(address: ShippingAddress): Promise<number> {
   if (!response.ok || result.status !== "success") {
     throw new Error(
       (result?.message as string | undefined) ??
-        "Could not validate a delivery address with Shipbubble."
+        "Could not validate a delivery address with Shipbubble.",
     );
   }
 
@@ -153,7 +154,7 @@ async function fetchCategoryId(): Promise<number> {
   if (!response.ok || result.status !== "success") {
     throw new Error(
       (result?.message as string | undefined) ??
-        "Could not load Shipbubble package categories."
+        "Could not load Shipbubble package categories.",
     );
   }
 
@@ -161,8 +162,8 @@ async function fetchCategoryId(): Promise<number> {
 
   const preferred = categories.find((category) =>
     ["accessories", "fashion wears", "general"].includes(
-      category.category.toLowerCase()
-    )
+      category.category.toLowerCase(),
+    ),
   );
 
   return preferred?.category_id ?? categories[0]?.category_id;
@@ -193,7 +194,9 @@ type ShipbubbleRatesResponse = {
  * sb:<token>:<service_code>:<courier_id>
  */
 function buildRateId(token: string, courier: ShipbubbleCourier): string {
-  return ["sb", token, courier.service_code, String(courier.courier_id)].join(":");
+  return ["sb", token, courier.service_code, String(courier.courier_id)].join(
+    ":",
+  );
 }
 
 function parseRateId(rateId: string): {
@@ -207,7 +210,7 @@ function parseRateId(rateId: string): {
 
 function normalizeCourier(
   courier: ShipbubbleCourier,
-  token: string
+  token: string,
 ): DeliveryQuote {
   return {
     rateId: buildRateId(token, courier),
@@ -226,7 +229,7 @@ function isValidQuote(quote: DeliveryQuote): boolean {
 }
 
 async function fetchRates(
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
 ): Promise<ShipbubbleRatesResponse> {
   const response = await fetch(`${apiBase}/shipping/fetch_rates`, {
     method: "POST",
@@ -240,7 +243,7 @@ async function fetchRates(
   if (!response.ok || result.status !== "success") {
     throw new Error(
       (result?.message as string | undefined) ??
-        "Could not fetch Shipbubble delivery rates."
+        "Could not fetch Shipbubble delivery rates.",
     );
   }
 
@@ -309,7 +312,7 @@ export class ShipbubbleShippingProvider implements ShippingProvider {
     if (!response.ok || result.status !== "success") {
       throw new Error(
         (result?.message as string | undefined) ??
-          "Could not create your Shipbubble shipment."
+          "Could not create your Shipbubble shipment.",
       );
     }
 

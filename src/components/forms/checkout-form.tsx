@@ -15,7 +15,18 @@ import { FormSelectField } from "@/components/forms/form-select-field";
 
 type Location = { state: string; cities: string[] };
 
-const schema = z.object({ firstName: z.string().min(2, "Enter your first name"), lastName: z.string().min(2, "Enter your last name"), email: z.string().email("Enter a valid email"), phone: z.string().min(7, "Enter a valid phone number"), country: z.string().min(2, "Enter your country"), state: z.string().min(2, "Enter your state"), city: z.string().min(2, "Enter your city"), address: z.string().min(5, "Enter your delivery address"), apartment: z.string().optional(), notes: z.string().optional() });
+const schema = z.object({
+  firstName: z.string().min(2, "Enter your first name"),
+  lastName: z.string().min(2, "Enter your last name"),
+  email: z.string().email("Enter a valid email"),
+  phone: z.string().min(7, "Enter a valid phone number"),
+  country: z.string().min(2, "Enter your country"),
+  state: z.string().min(2, "Enter your state"),
+  city: z.string().min(2, "Enter your city"),
+  address: z.string().min(5, "Enter your delivery address"),
+  apartment: z.string().optional(),
+  notes: z.string().optional(),
+});
 type FormValues = z.infer<typeof schema>;
 
 export function CheckoutForm() {
@@ -54,9 +65,7 @@ export function CheckoutForm() {
   useEffect(() => {
     fetch("/api/locations")
       .then((response) => response.json())
-      .then((data: { states?: Location[] }) =>
-        setLocations(data.states ?? [])
-      )
+      .then((data: { states?: Location[] }) => setLocations(data.states ?? []))
       .catch(() => {
         // keep the free-text fields if locations cannot load
       });
@@ -68,31 +77,30 @@ export function CheckoutForm() {
     () =>
       Boolean(
         watched.firstName?.trim() &&
-          watched.lastName?.trim() &&
-          watched.email?.trim() &&
-          watched.phone?.trim() &&
-          watched.country?.trim() &&
-          watched.state?.trim() &&
-          watched.city?.trim() &&
-          watched.address?.trim()
+        watched.lastName?.trim() &&
+        watched.email?.trim() &&
+        watched.phone?.trim() &&
+        watched.country?.trim() &&
+        watched.state?.trim() &&
+        watched.city?.trim() &&
+        watched.address?.trim(),
       ),
-    [watched]
+    [watched],
   );
 
   const isNigeria =
-    locations.length > 0 &&
-    watched.country?.trim().toLowerCase() === "nigeria";
+    locations.length > 0 && watched.country?.trim().toLowerCase() === "nigeria";
 
   const stateOptions = useMemo(
     () => locations.map((location) => location.state),
-    [locations]
+    [locations],
   );
 
   const cityOptions = useMemo(
     () =>
-      locations.find((location) => location.state === watched.state)
-        ?.cities ?? [],
-    [locations, watched.state]
+      locations.find((location) => location.state === watched.state)?.cities ??
+      [],
+    [locations, watched.state],
   );
 
   useEffect(() => {
@@ -144,13 +152,21 @@ export function CheckoutForm() {
         setError(
           quoteError instanceof Error
             ? quoteError.message
-            : "Could not estimate delivery."
+            : "Could not estimate delivery.",
         );
       }
     }, 600);
 
     return () => clearTimeout(timer);
-  }, [addressComplete, items, watched, setQuotes, setStatus, setError, resetDelivery]);
+  }, [
+    addressComplete,
+    items,
+    watched,
+    setQuotes,
+    setStatus,
+    setError,
+    resetDelivery,
+  ]);
 
   const onSubmit = async (customer: CheckoutCustomer) => {
     if (!items.length) {
@@ -163,7 +179,9 @@ export function CheckoutForm() {
       return;
     }
 
-    const selectedQuote = quotes.find((quote) => quote.rateId === selectedRateId);
+    const selectedQuote = quotes.find(
+      (quote) => quote.rateId === selectedRateId,
+    );
 
     setSubmitError("");
     setCartIssues([]);
@@ -212,17 +230,15 @@ export function CheckoutForm() {
       if (!response.ok || !result.success) {
         setCartIssues([
           ...(result.unavailableItems ?? []).map(
-            (item) => `${item.name} is no longer available.`
+            (item) => `${item.name} is no longer available.`,
           ),
           ...(result.priceChanges ?? []).map(
             (change) =>
-              `${change.before.name} changed from ${change.before.price} to ${change.after.price}.`
+              `${change.before.name} changed from ${change.before.price} to ${change.after.price}.`,
           ),
         ]);
 
-        throw new Error(
-          result.message ?? "Checkout could not be completed."
-        );
+        throw new Error(result.message ?? "Checkout could not be completed.");
       }
 
       // Redirect the customer to Paystack
@@ -237,8 +253,8 @@ export function CheckoutForm() {
 
         router.push(
           `/order-confirmation?reference=${encodeURIComponent(
-            result.reference
-          )}`
+            result.reference,
+          )}`,
         );
 
         return;
@@ -249,7 +265,7 @@ export function CheckoutForm() {
       setSubmitError(
         submissionError instanceof Error
           ? submissionError.message
-          : "Checkout could not be completed."
+          : "Checkout could not be completed.",
       );
     } finally {
       setSubmitting(false);
@@ -272,58 +288,101 @@ export function CheckoutForm() {
       onSubmit={handleSubmit(onSubmit)}
       className="glass-panel grid gap-5 rounded-2xl p-6 sm:grid-cols-2 sm:p-8"
     >
-      <FormField name="firstName" label="First name" register={register} error={errors.firstName} />
+      <FormField
+        name="firstName"
+        label="First name"
+        register={register}
+        error={errors.firstName}
+      />
 
-      <FormField name="lastName" label="Last name" register={register} error={errors.lastName} />
+      <FormField
+        name="lastName"
+        label="Last name"
+        register={register}
+        error={errors.lastName}
+      />
 
-      <FormField name="email" label="Email" type="email" wide register={register} error={errors.email} />
+      <FormField
+        name="email"
+        label="Email"
+        type="email"
+        wide
+        register={register}
+        error={errors.email}
+      />
 
-      <FormField name="phone" label="Phone number" type="tel" wide register={register} error={errors.phone} />
+      <FormField
+        name="phone"
+        label="Phone number"
+        type="tel"
+        wide
+        register={register}
+        error={errors.phone}
+      />
 
-      <FormField name="country" label="Country" register={register} error={errors.country} />
+      <FormField
+        name="country"
+        label="Country"
+        register={register}
+        error={errors.country}
+      />
 
-      {isNigeria
-        ? (
-            <FormSelectField
-              name="state"
-              label="State"
-              options={stateOptions}
-              value={watched.state ?? ""}
-              onChange={selectState}
-              error={errors.state}
-            />
-          )
-        : (
-            <FormField name="state" label="State" register={register} error={errors.state} />
-          )}
+      {isNigeria ? (
+        <FormSelectField
+          name="state"
+          label="State"
+          options={stateOptions}
+          value={watched.state ?? ""}
+          onChange={selectState}
+          error={errors.state}
+        />
+      ) : (
+        <FormField
+          name="state"
+          label="State"
+          register={register}
+          error={errors.state}
+        />
+      )}
 
-      {isNigeria
-        ? (
-            <FormSelectField
-              name="city"
-              label="City"
-              options={cityOptions}
-              value={watched.city ?? ""}
-              onChange={selectCity}
-              error={errors.city}
-            />
-          )
-        : (
-            <FormField name="city" label="City" register={register} error={errors.city} />
-          )}
+      {isNigeria ? (
+        <FormSelectField
+          name="city"
+          label="City"
+          options={cityOptions}
+          value={watched.city ?? ""}
+          onChange={selectCity}
+          error={errors.city}
+        />
+      ) : (
+        <FormField
+          name="city"
+          label="City"
+          register={register}
+          error={errors.city}
+        />
+      )}
 
-      <FormField name="address" label="Street address" wide register={register} error={errors.address} />
+      <FormField
+        name="address"
+        label="Street address"
+        wide
+        register={register}
+        error={errors.address}
+      />
 
-      <FormField name="apartment" label="Apartment, landmark (optional)" wide register={register} error={errors.apartment} />
+      <FormField
+        name="apartment"
+        label="Apartment, landmark (optional)"
+        wide
+        register={register}
+        error={errors.apartment}
+      />
 
       <DeliveryMethods />
 
-      <label
-        className="grid gap-2 text-sm sm:col-span-2"
-        htmlFor="notes"
-      >
+      <label className="grid gap-2 text-sm sm:col-span-2" htmlFor="notes">
         Delivery notes (optional)
-
         <textarea
           id="notes"
           {...register("notes")}
@@ -334,10 +393,7 @@ export function CheckoutForm() {
       {cartIssues.length > 0 && <CartIssuesAlert issues={cartIssues} />}
 
       {submitError && (
-        <p
-          className="text-sm text-red-700 sm:col-span-2"
-          role="alert"
-        >
+        <p className="text-sm text-red-700 sm:col-span-2" role="alert">
           {submitError}
         </p>
       )}
@@ -346,9 +402,7 @@ export function CheckoutForm() {
         disabled={submitting || !items.length}
         className="rounded-full bg-[#005dbd] px-6 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 sm:justify-self-start"
       >
-        {submitting
-          ? "Redirecting to payment…"
-          : "Continue to payment"}
+        {submitting ? "Redirecting to payment…" : "Continue to payment"}
       </button>
 
       <p className="text-xs text-[#334f6d] sm:col-span-2">

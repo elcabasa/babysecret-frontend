@@ -9,8 +9,7 @@ export function OrdersEmptyState() {
         You haven&apos;t placed any orders yet.
       </h2>
       <p className="mt-2 text-[#334f6d]">
-        Explore our baby care range and your order history will appear
-        here.
+        Explore our baby care range and your order history will appear here.
       </p>
       <Link
         href="/shop"

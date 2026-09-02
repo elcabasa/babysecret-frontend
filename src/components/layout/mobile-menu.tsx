@@ -76,9 +76,7 @@ export function MobileMenu({
         <Link
           href={accountHref}
           onClick={onClose}
-          className={
-            pathname === accountHref ? activeLinkClasses : linkClasses
-          }
+          className={pathname === accountHref ? activeLinkClasses : linkClasses}
         >
           {accountLabel}
         </Link>

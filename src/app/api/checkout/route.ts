@@ -4,8 +4,15 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { getPaymentProvider } from "@/services/payment/payment.service";
 import { toFormBody } from "@/lib/woocommerce-auth";
-import { getDeliveryQuotes, getShippingProviderName } from "@/services/shipping/shipping.service";
-import { defaultPickupAddress, defaultItemWeightKg, countryToCode } from "@/services/shipping/tship.service";
+import {
+  getDeliveryQuotes,
+  getShippingProviderName,
+} from "@/services/shipping/shipping.service";
+import {
+  defaultPickupAddress,
+  defaultItemWeightKg,
+  countryToCode,
+} from "@/services/shipping/tship.service";
 import type { CheckoutDelivery } from "@/types/order";
 
 const checkoutSchema = z.object({
@@ -29,7 +36,7 @@ const checkoutSchema = z.object({
         name: z.string().optional(),
         price: z.number().optional(),
         quantity: z.number().int().positive(),
-      })
+      }),
     )
     .min(1),
 
@@ -47,7 +54,7 @@ const checkoutSchema = z.object({
 async function verifyDeliveryQuote(
   delivery: CheckoutDelivery,
   customer: z.infer<typeof checkoutSchema>["customer"],
-  items: z.infer<typeof checkoutSchema>["items"]
+  items: z.infer<typeof checkoutSchema>["items"],
 ): Promise<CheckoutDelivery | null> {
   const parcelItems = items.map((item) => ({
     id: item.productId,
@@ -77,7 +84,7 @@ async function verifyDeliveryQuote(
     (quote) =>
       quote.carrierName === delivery.carrier &&
       Math.abs(quote.amount - delivery.amount) <= 1 &&
-      (!delivery.service || quote.service === delivery.service)
+      (!delivery.service || quote.service === delivery.service),
   );
 
   if (!match) return null;
@@ -92,7 +99,7 @@ async function verifyDeliveryQuote(
 
 function buildOrderMeta(
   reference: string,
-  delivery: CheckoutDelivery | null
+  delivery: CheckoutDelivery | null,
 ): { key: string; value: string }[] {
   if (!delivery) {
     return [{ key: "_babysecret_paystack_reference", value: reference }];
@@ -127,7 +134,7 @@ export async function POST(request: Request) {
           message: "Invalid checkout information.",
           errors: parsed.error.flatten(),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -144,7 +151,7 @@ export async function POST(request: Request) {
             message:
               "Your delivery estimate has changed. Please review your delivery options before continuing.",
           },
-          { status: 409 }
+          { status: 409 },
         );
       }
 
@@ -160,7 +167,7 @@ export async function POST(request: Request) {
         {
           message: "WooCommerce is not configured.",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -174,9 +181,9 @@ export async function POST(request: Request) {
      */
     const reference = `babysecret-${Date.now()}`;
 
-    const wooAuth = Buffer.from(
-      `${consumerKey}:${consumerSecret}`
-    ).toString("base64");
+    const wooAuth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString(
+      "base64",
+    );
 
     /*
      * Create the WooCommerce order.
@@ -253,10 +260,9 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           message:
-            wooOrder.message ||
-            "Could not create your WooCommerce order.",
+            wooOrder.message || "Could not create your WooCommerce order.",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -272,12 +278,11 @@ export async function POST(request: Request) {
         {
           message: "Invalid order total.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
     const callbackUrl = `${appUrl}/api/payment/verify?reference=${encodeURIComponent(reference)}`;
 
@@ -297,7 +302,7 @@ export async function POST(request: Request) {
         {
           message: "Could not initialize payment. Check the server logs.",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -325,7 +330,7 @@ export async function POST(request: Request) {
       {
         message,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

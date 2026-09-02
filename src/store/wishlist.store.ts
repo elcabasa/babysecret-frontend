@@ -25,7 +25,7 @@ export const useWishlistStore = create<WishlistState>()(
         set((state) =>
           state.items.some((item) => item.id === product.id)
             ? { items: state.items.filter((item) => item.id !== product.id) }
-            : { items: [...state.items, product] }
+            : { items: [...state.items, product] },
         ),
       removeItem: (productId) =>
         set((state) => ({
@@ -38,8 +38,8 @@ export const useWishlistStore = create<WishlistState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ items: state.items }),
       onRehydrateStorage: () => (state) => state?.setHasHydrated(true),
-    }
-  )
+    },
+  ),
 );
 
 export const selectWishlistCount = (state: WishlistState) => state.items.length;

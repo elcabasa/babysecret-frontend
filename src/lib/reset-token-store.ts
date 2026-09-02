@@ -20,7 +20,7 @@ const RESET_EXPIRES_KEY = "babysecret_reset_expires";
 
 export async function storeResetToken(
   email: string,
-  customerId: number
+  customerId: number,
 ): Promise<string> {
   // Embedding the customer id lets `consumeResetToken` locate the customer
   // from a bare token without scanning every account.
@@ -34,7 +34,9 @@ export async function storeResetToken(
   return token;
 }
 
-export async function verifyResetToken(token: string): Promise<ResetEntry | null> {
+export async function verifyResetToken(
+  token: string,
+): Promise<ResetEntry | null> {
   const customerId = Number(token.split(".")[0]);
   if (!customerId || !Number.isFinite(customerId)) return null;
 
@@ -54,7 +56,9 @@ export async function verifyResetToken(token: string): Promise<ResetEntry | null
   };
 }
 
-export async function consumeResetToken(token: string): Promise<ResetEntry | null> {
+export async function consumeResetToken(
+  token: string,
+): Promise<ResetEntry | null> {
   const entry = await verifyResetToken(token);
   if (!entry) return null;
 

@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { defaultPickupAddress, defaultItemWeightKg } from "@/services/shipping/tship.service";
+import {
+  defaultPickupAddress,
+  defaultItemWeightKg,
+} from "@/services/shipping/tship.service";
 import { getDeliveryQuotes } from "@/services/shipping/shipping.service";
 import type { ParcelItemInput } from "@/types/shipping";
 
@@ -23,7 +26,7 @@ const quoteSchema = z.object({
         name: z.string().min(1),
         price: z.number().positive(),
         quantity: z.number().int().positive(),
-      })
+      }),
     )
     .min(1),
 });
@@ -36,8 +39,11 @@ export async function POST(request: Request) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { message: "Invalid delivery information.", errors: parsed.error.flatten() },
-        { status: 400 }
+        {
+          message: "Invalid delivery information.",
+          errors: parsed.error.flatten(),
+        },
+        { status: 400 },
       );
     }
 

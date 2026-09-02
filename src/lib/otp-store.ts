@@ -18,7 +18,7 @@ export function generateOtp(): string {
 export async function storeOtp(
   email: string,
   code: string,
-  customerId: number
+  customerId: number,
 ): Promise<void> {
   await updateCustomerMeta(customerId, [
     { key: OTP_CODE_KEY, value: code },
@@ -28,7 +28,7 @@ export async function storeOtp(
 
 export async function verifyOtp(
   email: string,
-  code: string
+  code: string,
 ): Promise<number | null> {
   const customer = await getCustomerByEmail(email);
   if (!customer) return null;
