@@ -4,22 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Heart, Menu, ShoppingCart, X } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { CartCount } from "@/components/cart/cart-count";
 import { SearchControl } from "@/components/layout/search-control";
 import { AccountMenu } from "@/components/layout/account-menu";
-import { useCartStore } from "@/store/cart.store";
+import { DesktopNav } from "@/components/layout/desktop-nav";
+import { MobileMenu } from "@/components/layout/mobile-menu";
 import { useWishlistStore } from "@/store/wishlist.store";
 
 const logoImage = "/logo.png";
-
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/shop", label: "Catalog" },
-  { href: "/about", label: "About Us" },
-  { href: "/contact", label: "Contact" },
-];
 
 export function Header() {
   const [open, setOpen] = useState(false);
@@ -31,11 +25,6 @@ export function Header() {
   const wishlistCount = useWishlistStore((state) =>
     state.hasHydrated ? state.items.length : 0
   );
-
-  const isLinkActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    return pathname.startsWith(href);
-  };
 
   return (
     <>
@@ -50,24 +39,7 @@ export function Header() {
           />
         </Link>
 
-        <nav className="hidden items-center gap-2 text-sm md:flex">
-          {navLinks.map((link) => {
-            const active = isLinkActive(link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`rounded-full px-3.5 py-1.5 font-medium transition-all ${
-                  active
-                    ? "bg-[#e7effc] font-semibold text-[#005dbd] shadow-xs"
-                    : "text-[#334f6d] hover:bg-black/5 hover:text-[#005dbd]"
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <DesktopNav pathname={pathname} />
 
         <div className="flex items-center gap-3">
           <Link
@@ -123,89 +95,14 @@ export function Header() {
       </header>
 
       {open && (
-        <nav className="glass-panel absolute left-4 right-4 top-24 z-20 rounded-2xl p-5 md:hidden shadow-xl">
-          <div className="grid gap-2 text-sm">
-            <div className="mb-2">
-              <SearchControl />
-            </div>
-
-            {navLinks.map((link) => {
-              const active = isLinkActive(link.href);
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setOpen(false)}
-                  className={`rounded-xl px-3.5 py-2.5 transition ${
-                    active
-                      ? "bg-[#e7effc] font-semibold text-[#005dbd]"
-                      : "text-[#102a43] hover:bg-slate-100"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-
-            <Link
-              href="/wishlist"
-              onClick={() => setOpen(false)}
-              className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 transition ${
-                pathname === "/wishlist"
-                  ? "bg-[#e7effc] font-semibold text-[#005dbd]"
-                  : "text-[#102a43] hover:bg-slate-100"
-              }`}
-            >
-              <span>Wishlist</span>
-              {wishlistCount > 0 && (
-                <span className="rounded-full bg-[#005dbd] px-2 py-0.5 text-xs font-bold text-white">
-                  {wishlistCount}
-                </span>
-              )}
-            </Link>
-
-            <Link
-              href={accountHref}
-              onClick={() => setOpen(false)}
-              className={`rounded-xl px-3.5 py-2.5 transition ${
-                pathname === accountHref
-                  ? "bg-[#e7effc] font-semibold text-[#005dbd]"
-                  : "text-[#102a43] hover:bg-slate-100"
-              }`}
-            >
-              {accountLabel}
-            </Link>
-
-            {signedIn && (
-              <>
-                <Link
-                  href="/orders"
-                  onClick={() => setOpen(false)}
-                  className={`rounded-xl px-3.5 py-2.5 transition ${
-                    pathname === "/orders"
-                      ? "bg-[#e7effc] font-semibold text-[#005dbd]"
-                      : "text-[#102a43] hover:bg-slate-100"
-                  }`}
-                >
-                  My Orders
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpen(false);
-                    useCartStore.getState().clearCart();
-                    useWishlistStore.getState().clearWishlist();
-                    signOut({ callbackUrl: "/login" });
-                  }}
-                  className="rounded-xl px-3.5 py-2.5 text-left font-medium text-red-700 transition hover:bg-red-50"
-                >
-                  Sign out
-                </button>
-              </>
-            )}
-          </div>
-        </nav>
+        <MobileMenu
+          pathname={pathname}
+          wishlistCount={wishlistCount}
+          accountHref={accountHref}
+          accountLabel={accountLabel}
+          signedIn={signedIn}
+          onClose={() => setOpen(false)}
+        />
       )}
     </>
   );
