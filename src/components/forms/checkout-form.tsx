@@ -8,7 +8,10 @@ import { useCartStore } from "@/store/cart.store";
 import { useDeliveryStore } from "@/store/delivery.store";
 import type { CheckoutCustomer } from "@/types/order";
 import type { DeliveryQuote } from "@/types/shipping";
-import { formatPrice } from "@/data/products";
+import { CartIssuesAlert } from "@/components/forms/cart-issues-alert";
+import { DeliveryMethods } from "@/components/forms/delivery-methods";
+import { FormField } from "@/components/forms/form-field";
+import { FormSelectField } from "@/components/forms/form-select-field";
 
 type Location = { state: string; cities: string[] };
 
@@ -24,11 +27,10 @@ export function CheckoutForm() {
   const quotes = useDeliveryStore((state) => state.quotes);
   const selectedRateId = useDeliveryStore((state) => state.selectedRateId);
   const status = useDeliveryStore((state) => state.status);
-  const deliveryError = useDeliveryStore((state) => state.error);
+
   const setQuotes = useDeliveryStore((state) => state.setQuotes);
   const setStatus = useDeliveryStore((state) => state.setStatus);
   const setError = useDeliveryStore((state) => state.setError);
-  const selectRate = useDeliveryStore((state) => state.selectRate);
   const resetDelivery = useDeliveryStore((state) => state.reset);
 
   const [submitError, setSubmitError] = useState("");
@@ -254,182 +256,67 @@ export function CheckoutForm() {
     }
   };
 
-  const field = (
-    name: keyof FormValues,
-    label: string,
-    type = "text",
-    wide = false
-  ) => (
-    <label
-      className={`grid gap-2 text-sm ${
-        wide ? "sm:col-span-2" : ""
-      }`}
-      htmlFor={name}
-    >
-      {label}
+  const selectState = (value: string) => {
+    setValue("state", value, { shouldValidate: true });
+    if (value !== watched.state) {
+      setValue("city", "", { shouldValidate: true });
+    }
+  };
 
-      <input
-        id={name}
-        type={type}
-        {...register(name)}
-        aria-invalid={Boolean(errors[name])}
-        className="glass-control rounded-xl px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[#3051a0]"
-      />
-
-      {errors[name] && (
-        <span
-          className="text-xs text-red-700"
-          role="alert"
-        >
-          {errors[name]?.message}
-        </span>
-      )}
-    </label>
-  );
-
-  const selectField = (
-    name: keyof FormValues,
-    label: string,
-    options: string[],
-    onChange: (value: string) => void,
-    placeholder = `Select ${label.toLowerCase()}`,
-    wide = false
-  ) => (
-    <label
-      className={`grid gap-2 text-sm ${
-        wide ? "sm:col-span-2" : ""
-      }`}
-      htmlFor={name}
-    >
-      {label}
-
-      <select
-        id={name}
-        value={watched[name] ?? ""}
-        onChange={(event) => {
-          setValue(name, event.target.value, { shouldValidate: true });
-          onChange(event.target.value);
-        }}
-        aria-invalid={Boolean(errors[name])}
-        className="glass-control rounded-xl px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[#3051a0]"
-      >
-        <option value="">{placeholder}</option>
-
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-
-      {errors[name] && (
-        <span
-          className="text-xs text-red-700"
-          role="alert"
-        >
-          {errors[name]?.message}
-        </span>
-      )}
-    </label>
-  );
+  const selectCity = (value: string) => {
+    setValue("city", value, { shouldValidate: true });
+  };
 
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
       className="glass-panel grid gap-5 rounded-2xl p-6 sm:grid-cols-2 sm:p-8"
     >
-      {field("firstName", "First name")}
+      <FormField name="firstName" label="First name" register={register} error={errors.firstName} />
 
-      {field("lastName", "Last name")}
+      <FormField name="lastName" label="Last name" register={register} error={errors.lastName} />
 
-      {field("email", "Email", "email", true)}
+      <FormField name="email" label="Email" type="email" wide register={register} error={errors.email} />
 
-      {field("phone", "Phone number", "tel", true)}
+      <FormField name="phone" label="Phone number" type="tel" wide register={register} error={errors.phone} />
 
-      {field("country", "Country")}
-
-      {isNigeria
-        ? selectField("state", "State", stateOptions, (value) => {
-            if (value !== watched.state) {
-              setValue("city", "", { shouldValidate: true });
-            }
-          })
-        : field("state", "State")}
+      <FormField name="country" label="Country" register={register} error={errors.country} />
 
       {isNigeria
-        ? selectField("city", "City", cityOptions, () => undefined)
-        : field("city", "City")}
+        ? (
+            <FormSelectField
+              name="state"
+              label="State"
+              options={stateOptions}
+              value={watched.state ?? ""}
+              onChange={selectState}
+              error={errors.state}
+            />
+          )
+        : (
+            <FormField name="state" label="State" register={register} error={errors.state} />
+          )}
 
-      {field("address", "Street address", "text", true)}
+      {isNigeria
+        ? (
+            <FormSelectField
+              name="city"
+              label="City"
+              options={cityOptions}
+              value={watched.city ?? ""}
+              onChange={selectCity}
+              error={errors.city}
+            />
+          )
+        : (
+            <FormField name="city" label="City" register={register} error={errors.city} />
+          )}
 
-      {field(
-        "apartment",
-        "Apartment, landmark (optional)",
-        "text",
-        true
-      )}
+      <FormField name="address" label="Street address" wide register={register} error={errors.address} />
 
-      <div className="sm:col-span-2">
-        <h3 className="text-sm font-semibold">Delivery method</h3>
+      <FormField name="apartment" label="Apartment, landmark (optional)" wide register={register} error={errors.apartment} />
 
-        {status === "loading" && (
-          <p className="mt-2 text-sm text-[#334f6d]">
-            Estimating delivery rates for your address…
-          </p>
-        )}
-
-        {status === "unavailable" && (
-          <p className="mt-2 text-sm text-red-700">
-            No delivery rate is available for this address.
-          </p>
-        )}
-
-        {(status === "error") && (
-          <p className="mt-2 text-sm text-red-700" role="alert">
-            {deliveryError || "Could not estimate delivery. Please review your address."}
-          </p>
-        )}
-
-        {status === "ready" && quotes.length > 0 && (
-          <div className="mt-3 grid gap-3">
-            {quotes.map((quote) => (
-              <label
-                key={quote.rateId}
-                className={`flex cursor-pointer items-center justify-between gap-4 rounded-xl border px-4 py-3 text-sm ${
-                  selectedRateId === quote.rateId
-                    ? "border-[#005dbd] bg-[#e7effc]"
-                    : "border-[#e5e3e3] bg-white"
-                }`}
-              >
-                <span className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="delivery"
-                    checked={selectedRateId === quote.rateId}
-                    onChange={() => selectRate(quote.rateId)}
-                  />
-                  <span>
-                    <span className="block font-semibold">
-                      {quote.carrierName}
-                    </span>
-                    <span className="block text-[#334f6d]">
-                      {quote.service}
-                      {quote.deliveryTime ? ` · ${quote.deliveryTime}` : ""}
-                    </span>
-                  </span>
-                </span>
-                <strong>{formatPrice(quote.amount)}</strong>
-              </label>
-            ))}
-          </div>
-        )}
-
-        {status === "idle" && (
-          <p className="mt-2 text-sm text-[#334f6d]">
-            Delivery is calculated from your address and cart contents.
-          </p>
-        )}
-      </div>
+      <DeliveryMethods />
 
       <label
         className="grid gap-2 text-sm sm:col-span-2"
@@ -444,27 +331,7 @@ export function CheckoutForm() {
         />
       </label>
 
-      {cartIssues.length > 0 && (
-        <div
-          className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 sm:col-span-2"
-          role="alert"
-        >
-          <p className="font-semibold">
-            Review your cart before continuing
-          </p>
-
-          <ul className="mt-2 list-disc space-y-1 pl-5">
-            {cartIssues.map((issue) => (
-              <li key={issue}>{issue}</li>
-            ))}
-          </ul>
-
-          <p className="mt-2">
-            Return to the cart to remove unavailable items or review
-            updated prices.
-          </p>
-        </div>
-      )}
+      {cartIssues.length > 0 && <CartIssuesAlert issues={cartIssues} />}
 
       {submitError && (
         <p
