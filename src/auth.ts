@@ -26,7 +26,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       authorize: async (credentials) => {
-        const email = String(credentials?.email ?? "").toLowerCase().trim();
+        const email = String(credentials?.email ?? "")
+          .toLowerCase()
+          .trim();
         const password = String(credentials?.password ?? "");
 
         if (!email || !password) return null;
@@ -66,18 +68,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
         session.user.isVerified = Boolean(token.isVerified);
         session.user.authProvider = (token.authProvider ?? "password") as
-          | "password"
-          | "google";
-        session.user.role = (token.role ?? "customer") as
-          | "customer"
-          | "admin";
+          "password" | "google";
+        session.user.role = (token.role ?? "customer") as "customer" | "admin";
       }
       return session;
     },
     async signIn({ user, account, profile }) {
       if (account?.provider !== "google") return true;
 
-      const email = String(user.email ?? (profile as { email?: string })?.email ?? "")
+      const email = String(
+        user.email ?? (profile as { email?: string })?.email ?? "",
+      )
         .toLowerCase()
         .trim();
 
@@ -87,14 +88,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       if (existing) {
         const provider = existing.meta_data?.find(
-          (meta) => meta.key === "auth_provider"
+          (meta) => meta.key === "auth_provider",
         )?.value;
 
         if (provider === "password") {
           const error = new Error("ACCOUNT_PASSWORD_COLLISION");
           (error as { code?: string }).code = "ACCOUNT_PASSWORD_COLLISION";
           console.error(
-            "[auth] google sign-in blocked: account is password-protected"
+            "[auth] google sign-in blocked: account is password-protected",
           );
           throw error;
         }

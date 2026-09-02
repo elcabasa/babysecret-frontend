@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { message: "Invalid verification details." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json(
         { message: "Invalid or expired code." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     console.error("Verify email error:", error);
     return NextResponse.json(
       { message: "Could not verify your email." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -72,7 +72,12 @@ export function UserDataSync() {
   ]);
 
   useEffect(() => {
-    if (status !== "authenticated" || !activeUserId.current || !isInitialLoadDone.current) return;
+    if (
+      status !== "authenticated" ||
+      !activeUserId.current ||
+      !isInitialLoadDone.current
+    )
+      return;
 
     const timer = setTimeout(() => {
       fetch("/api/account/cart", {
@@ -83,7 +88,10 @@ export function UserDataSync() {
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
           const verified = data?.items as CartItem[] | undefined;
-          if (Array.isArray(verified) && !sameCart(verified, useCartStore.getState().items)) {
+          if (
+            Array.isArray(verified) &&
+            !sameCart(verified, useCartStore.getState().items)
+          ) {
             setCartItems(verified);
           }
         })
@@ -94,7 +102,12 @@ export function UserDataSync() {
   }, [cartItems, status, setCartItems]);
 
   useEffect(() => {
-    if (status !== "authenticated" || !activeUserId.current || !isInitialLoadDone.current) return;
+    if (
+      status !== "authenticated" ||
+      !activeUserId.current ||
+      !isInitialLoadDone.current
+    )
+      return;
 
     const timer = setTimeout(() => {
       fetch("/api/account/wishlist", {

@@ -71,12 +71,14 @@ export async function POST(request: Request) {
     if (!session?.user?.id) {
       return NextResponse.json(
         { message: "Authentication required" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     const body = await request.json();
-    const incoming = Array.isArray(body?.items) ? (body.items as CartItem[]) : [];
+    const incoming = Array.isArray(body?.items)
+      ? (body.items as CartItem[])
+      : [];
 
     const items = await verifyItems(incoming);
 
@@ -89,7 +91,7 @@ export async function POST(request: Request) {
     console.error("Save WooCommerce cart error:", error);
     return NextResponse.json(
       { message: "Could not save cart" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -22,7 +22,8 @@ export function AccountMenu() {
     );
   }
 
-  const firstName = session.user.name?.split(" ")[0] ?? session.user.email ?? "User";
+  const firstName =
+    session.user.name?.split(" ")[0] ?? session.user.email ?? "User";
 
   return (
     <div className="relative hidden sm:block">
@@ -46,7 +47,10 @@ export function AccountMenu() {
           {firstName.charAt(0)}
         </span>
         {firstName}
-        <ChevronDown size={14} className={`transition ${open ? "rotate-180" : ""}`} />
+        <ChevronDown
+          size={14}
+          className={`transition ${open ? "rotate-180" : ""}`}
+        />
       </button>
 
       {open && (

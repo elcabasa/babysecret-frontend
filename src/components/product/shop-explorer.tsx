@@ -50,11 +50,7 @@ export function ShopExplorer({
       if (category) params.set("category", category);
 
       if (typeof window !== "undefined") {
-        window.history.replaceState(
-          null,
-          "",
-          `/shop?${params.toString()}`
-        );
+        window.history.replaceState(null, "", `/shop?${params.toString()}`);
       }
 
       try {
@@ -103,13 +99,27 @@ export function ShopExplorer({
 
   return (
     <div>
-      <ShopCatalogHeader totalProducts={totalProducts} sort={sort} onSortChange={applySort} />
+      <ShopCatalogHeader
+        totalProducts={totalProducts}
+        sort={sort}
+        onSortChange={applySort}
+      />
 
-      <ShopSearchForm value={search} onChange={setSearch} onSubmit={() => setPage(1)} />
+      <ShopSearchForm
+        value={search}
+        onChange={setSearch}
+        onSubmit={() => setPage(1)}
+      />
 
-      <CategoryFilter categories={categories} selected={category} onSelect={applyCategory} />
+      <CategoryFilter
+        categories={categories}
+        selected={category}
+        onSelect={applyCategory}
+      />
 
-      <div className={`transition-opacity ${isPending ? "opacity-50" : "opacity-100"}`}>
+      <div
+        className={`transition-opacity ${isPending ? "opacity-50" : "opacity-100"}`}
+      >
         {products.length ? (
           <ProductGrid products={products} />
         ) : (
@@ -117,7 +127,11 @@ export function ShopExplorer({
         )}
       </div>
 
-      <Pagination page={page} totalPages={totalPages} onPageChange={applyPage} />
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={applyPage}
+      />
     </div>
   );
 }

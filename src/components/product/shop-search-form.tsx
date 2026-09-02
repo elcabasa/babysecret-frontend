@@ -4,7 +4,11 @@ type ShopSearchFormProps = {
   onSubmit: () => void;
 };
 
-export function ShopSearchForm({ value, onChange, onSubmit }: ShopSearchFormProps) {
+export function ShopSearchForm({
+  value,
+  onChange,
+  onSubmit,
+}: ShopSearchFormProps) {
   return (
     <form
       className="glass-panel mb-8 flex max-w-xl gap-2 rounded-2xl p-2"

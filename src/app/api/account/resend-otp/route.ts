@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { message: "Enter a valid email." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     if (isVerified) {
       return NextResponse.json(
         { message: "This email is already verified." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     console.error("Resend OTP error:", error);
     return NextResponse.json(
       { message: "Could not resend the code." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

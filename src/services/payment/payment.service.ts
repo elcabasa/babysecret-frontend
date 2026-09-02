@@ -21,7 +21,7 @@ class DemoPaymentProvider implements PaymentProvider {
 
   async verifyPayment(
     reference: string,
-    _transactionId?: string
+    _transactionId?: string,
   ): Promise<PaymentVerificationResult> {
     return {
       verified: false,
@@ -57,7 +57,7 @@ class PaystackPaymentProvider implements PaymentProvider {
           reference: input.reference,
           callback_url: input.callbackUrl,
         }),
-      }
+      },
     );
 
     const result = await response.json();
@@ -65,7 +65,7 @@ class PaystackPaymentProvider implements PaymentProvider {
     if (!response.ok || !result.status) {
       throw new Error(
         result.message ||
-          `Paystack initialization failed with status ${response.status}`
+          `Paystack initialization failed with status ${response.status}`,
       );
     }
 
@@ -78,7 +78,7 @@ class PaystackPaymentProvider implements PaymentProvider {
 
   async verifyPayment(
     reference: string,
-    _transactionId?: string
+    _transactionId?: string,
   ): Promise<PaymentVerificationResult> {
     if (!this.secretKey) {
       throw new Error("Paystack secret key is not configured.");
@@ -86,13 +86,13 @@ class PaystackPaymentProvider implements PaymentProvider {
 
     const response = await fetch(
       `https://api.paystack.co/transaction/verify/${encodeURIComponent(
-        reference
+        reference,
       )}`,
       {
         headers: {
           Authorization: `Bearer ${this.secretKey}`,
         },
-      }
+      },
     );
 
     const result = await response.json();
@@ -119,46 +119,36 @@ class FlutterwavePaymentProvider implements PaymentProvider {
     phoneNumber?: string;
   }): Promise<PaymentInitializationResult> {
     if (!this.secretKey) {
-      throw new Error(
-        "Flutterwave secret key is not configured."
-      );
+      throw new Error("Flutterwave secret key is not configured.");
     }
 
-    const response = await fetch(
-      "https://api.flutterwave.com/v3/payments",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.secretKey}`,
-          "Content-Type": "application/json",
+    const response = await fetch("https://api.flutterwave.com/v3/payments", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.secretKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tx_ref: input.reference,
+        amount: input.amount,
+        currency: "NGN",
+        redirect_url: input.callbackUrl,
+        customer: {
+          email: input.email,
+          name: input.customerName,
+          phonenumber: input.phoneNumber,
         },
-        body: JSON.stringify({
-          tx_ref: input.reference,
-          amount: input.amount,
-          currency: "NGN",
-          redirect_url: input.callbackUrl,
-          customer: {
-            email: input.email,
-            name: input.customerName,
-            phonenumber: input.phoneNumber,
-          },
-          customizations: {
-            title: "BabySecret Payment",
-          },
-        }),
-      }
-    );
+        customizations: {
+          title: "BabySecret Payment",
+        },
+      }),
+    });
 
     const result = await response.json();
 
-    if (
-      !response.ok ||
-      result.status !== "success" ||
-      !result.data?.link
-    ) {
+    if (!response.ok || result.status !== "success" || !result.data?.link) {
       throw new Error(
-        result.message ||
-          "Could not initialize Flutterwave payment."
+        result.message || "Could not initialize Flutterwave payment.",
       );
     }
 
@@ -171,12 +161,10 @@ class FlutterwavePaymentProvider implements PaymentProvider {
 
   async verifyPayment(
     reference: string,
-    transactionId?: string
+    transactionId?: string,
   ): Promise<PaymentVerificationResult> {
     if (!this.secretKey) {
-      throw new Error(
-        "Flutterwave secret key is not configured."
-      );
+      throw new Error("Flutterwave secret key is not configured.");
     }
 
     if (!transactionId) {
@@ -188,14 +176,14 @@ class FlutterwavePaymentProvider implements PaymentProvider {
 
     const response = await fetch(
       `https://api.flutterwave.com/v3/transactions/${encodeURIComponent(
-        transactionId
+        transactionId,
       )}/verify`,
       {
         headers: {
           Authorization: `Bearer ${this.secretKey}`,
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     const result = await response.json();
@@ -215,11 +203,9 @@ class FlutterwavePaymentProvider implements PaymentProvider {
 }
 
 export function getPaymentProvider(
-  providerName?: "paystack" | "flutterwave"
+  providerName?: "paystack" | "flutterwave",
 ): PaymentProvider {
-  const provider =
-    providerName ||
-    process.env.PAYMENT_PROVIDER;
+  const provider = providerName || process.env.PAYMENT_PROVIDER;
 
   if (provider === "paystack") {
     return new PaystackPaymentProvider();

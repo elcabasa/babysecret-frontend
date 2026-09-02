@@ -27,7 +27,9 @@ export function BenefitsSection() {
   return (
     <section className="border-b border-[#efebe2]/60 bg-[#f9fcff] px-6 py-16 sm:px-10">
       <div className="mx-auto max-w-[1200px]">
-        <h2 className="text-center text-3xl font-medium">Made for little moments.</h2>
+        <h2 className="text-center text-3xl font-medium">
+          Made for little moments.
+        </h2>
         <div className="mt-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {benefits.map(({ title, text, icon: Icon }) => (
             <div key={title} className="text-center">

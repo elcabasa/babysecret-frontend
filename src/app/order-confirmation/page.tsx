@@ -28,19 +28,15 @@ export default async function OrderConfirmationPage({
           </h1>
 
           <p className="mt-4 text-[#334f6d]">
-            Your payment has been received and your order is being processed.
-            We will begin preparing your order shortly.
+            Your payment has been received and your order is being processed. We
+            will begin preparing your order shortly.
           </p>
 
           {reference && (
             <div className="mt-6 rounded-xl bg-white p-4 text-sm">
-              <p className="text-[#334f6d]">
-                Payment reference
-              </p>
+              <p className="text-[#334f6d]">Payment reference</p>
 
-              <p className="mt-2 font-semibold text-[#102a43]">
-                {reference}
-              </p>
+              <p className="mt-2 font-semibold text-[#102a43]">{reference}</p>
             </div>
           )}
 

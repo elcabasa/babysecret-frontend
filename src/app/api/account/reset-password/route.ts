@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { message: "Invalid reset details." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     if (!entry) {
       return NextResponse.json(
         { message: "This reset link is invalid or has expired." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     console.error("Reset password error:", error);
     return NextResponse.json(
       { message: "Could not reset your password." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

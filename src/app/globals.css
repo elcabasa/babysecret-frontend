@@ -24,7 +24,9 @@ body {
 .glass-panel {
   border: 1px solid rgba(255, 255, 255, 0.62);
   background: rgba(255, 255, 255, 0.68);
-  box-shadow: 0 14px 36px rgba(48, 81, 160, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow:
+    0 14px 36px rgba(48, 81, 160, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(18px) saturate(135%);
   -webkit-backdrop-filter: blur(18px) saturate(135%);
 }
@@ -32,7 +34,9 @@ body {
 .glass-control {
   border: 1px solid rgba(255, 255, 255, 0.7);
   background: rgba(255, 255, 255, 0.58);
-  box-shadow: 0 8px 22px rgba(48, 81, 160, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow:
+    0 8px 22px rgba(48, 81, 160, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(14px) saturate(130%);
   -webkit-backdrop-filter: blur(14px) saturate(130%);
 }

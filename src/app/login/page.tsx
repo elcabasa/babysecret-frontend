@@ -1,8 +1,7 @@
 import { Header } from "@/components/layout/header";
 import { LoginForm } from "@/components/auth/login-form";
 
-const googleEnabled =
-  process.env.NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED === "true";
+const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED === "true";
 
 export default async function LoginPage({
   searchParams,

@@ -9,11 +9,9 @@ export async function POST(request: NextRequest) {
   try {
     const rawBody = await request.text();
 
-    const paystackSignature =
-      request.headers.get("x-paystack-signature");
+    const paystackSignature = request.headers.get("x-paystack-signature");
 
-    const flutterwaveSignature =
-      request.headers.get("flutterwave-signature");
+    const flutterwaveSignature = request.headers.get("flutterwave-signature");
 
     let provider: ProviderName | null = null;
 
@@ -26,7 +24,7 @@ export async function POST(request: NextRequest) {
       if (!secretKey) {
         return NextResponse.json(
           { message: "Paystack is not configured." },
-          { status: 500 }
+          { status: 500 },
         );
       }
 
@@ -38,12 +36,12 @@ export async function POST(request: NextRequest) {
       if (
         !crypto.timingSafeEqual(
           Buffer.from(hash),
-          Buffer.from(paystackSignature)
+          Buffer.from(paystackSignature),
         )
       ) {
         return NextResponse.json(
           { message: "Invalid Paystack signature." },
-          { status: 401 }
+          { status: 401 },
         );
       }
 
@@ -54,16 +52,14 @@ export async function POST(request: NextRequest) {
      * FLUTTERWAVE SIGNATURE VERIFICATION
      */
     else if (flutterwaveSignature) {
-      const secretHash =
-        process.env.FLUTTERWAVE_WEBHOOK_SECRET_HASH;
+      const secretHash = process.env.FLUTTERWAVE_WEBHOOK_SECRET_HASH;
 
       if (!secretHash) {
         return NextResponse.json(
           {
-            message:
-              "Flutterwave webhook secret hash is not configured.",
+            message: "Flutterwave webhook secret hash is not configured.",
           },
-          { status: 500 }
+          { status: 500 },
         );
       }
 
@@ -75,12 +71,12 @@ export async function POST(request: NextRequest) {
       if (
         !crypto.timingSafeEqual(
           Buffer.from(hash),
-          Buffer.from(flutterwaveSignature)
+          Buffer.from(flutterwaveSignature),
         )
       ) {
         return NextResponse.json(
           { message: "Invalid Flutterwave signature." },
-          { status: 401 }
+          { status: 401 },
         );
       }
 
@@ -90,7 +86,7 @@ export async function POST(request: NextRequest) {
     if (!provider) {
       return NextResponse.json(
         { message: "Unknown payment provider." },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -117,36 +113,23 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
       }
 
-      const status =
-        payload.data?.status;
+      const status = payload.data?.status;
 
-      if (
-        status !== "successful" &&
-        status !== "succeeded"
-      ) {
+      if (status !== "successful" && status !== "succeeded") {
         return NextResponse.json({ received: true });
       }
 
-      reference =
-        payload.data?.tx_ref ||
-        payload.data?.reference;
+      reference = payload.data?.tx_ref || payload.data?.reference;
 
       transactionId = String(
-        payload.data?.id ||
-        payload.data?.transaction_id ||
-        ""
+        payload.data?.id || payload.data?.transaction_id || "",
       );
 
       successfulPayment = true;
     }
 
-    if (
-      !successfulPayment ||
-      !reference
-    ) {
-      return NextResponse.json(
-        { received: true }
-      );
+    if (!successfulPayment || !reference) {
+      return NextResponse.json({ received: true });
     }
 
     /*
@@ -154,92 +137,65 @@ export async function POST(request: NextRequest) {
      *
      * Do not trust the webhook payload alone.
      */
-    const paymentProvider =
-      getPaymentProvider(provider);
+    const paymentProvider = getPaymentProvider(provider);
 
-    const verification =
-      await paymentProvider.verifyPayment(
-        reference,
-        transactionId || undefined
-      );
+    const verification = await paymentProvider.verifyPayment(
+      reference,
+      transactionId || undefined,
+    );
 
     if (!verification.verified) {
-      console.error(
-        "Webhook payment verification failed:",
-        {
-          provider,
-          reference,
-        }
-      );
+      console.error("Webhook payment verification failed:", {
+        provider,
+        reference,
+      });
 
-      return NextResponse.json(
-        { received: true }
-      );
+      return NextResponse.json({ received: true });
     }
 
     /*
      * WooCommerce configuration.
      */
-    const wooUrl =
-      process.env.WOOCOMMERCE_REST_URL;
+    const wooUrl = process.env.WOOCOMMERCE_REST_URL;
 
-    const consumerKey =
-      process.env.WOOCOMMERCE_CONSUMER_KEY;
+    const consumerKey = process.env.WOOCOMMERCE_CONSUMER_KEY;
 
-    const consumerSecret =
-      process.env.WOOCOMMERCE_CONSUMER_SECRET;
+    const consumerSecret = process.env.WOOCOMMERCE_CONSUMER_SECRET;
 
-    if (
-      !wooUrl ||
-      !consumerKey ||
-      !consumerSecret
-    ) {
-      throw new Error(
-        "WooCommerce is not configured."
-      );
+    if (!wooUrl || !consumerKey || !consumerSecret) {
+      throw new Error("WooCommerce is not configured.");
     }
 
-    const auth = Buffer.from(
-      `${consumerKey}:${consumerSecret}`
-    ).toString("base64");
+    const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString(
+      "base64",
+    );
 
     /*
      * Find the order using our payment reference.
      */
     const ordersResponse = await fetch(
       `${wooUrl}/orders?meta_key=_babysecret_paystack_reference&meta_value=${encodeURIComponent(
-        reference
+        reference,
       )}`,
       {
         headers: {
           Authorization: `Basic ${auth}`,
         },
-      }
+      },
     );
 
-    const orders =
-      await ordersResponse.json();
+    const orders = await ordersResponse.json();
 
-    if (
-      !ordersResponse.ok ||
-      !Array.isArray(orders)
-    ) {
-      throw new Error(
-        "Could not find WooCommerce order."
-      );
+    if (!ordersResponse.ok || !Array.isArray(orders)) {
+      throw new Error("Could not find WooCommerce order.");
     }
 
     const order = orders[0];
 
     if (!order) {
-      console.error(
-        "No order found for webhook reference:",
-        reference
-      );
+      console.error("No order found for webhook reference:", reference);
 
-      return NextResponse.json(
-        { received: true }
-      );
+      return NextResponse.json({ received: true });
     }
 
     /*
@@ -247,10 +203,7 @@ export async function POST(request: NextRequest) {
      * If already processing or completed,
      * don't update it again.
      */
-    if (
-      order.status === "processing" ||
-      order.status === "completed"
-    ) {
+    if (order.status === "processing" || order.status === "completed") {
       return NextResponse.json({
         received: true,
         alreadyProcessed: true,
@@ -260,66 +213,48 @@ export async function POST(request: NextRequest) {
     /*
      * Update WooCommerce order.
      */
-    const updateResponse = await fetch(
-      `${wooUrl}/orders/${order.id}`,
-      {
-        method: "PUT",
+    const updateResponse = await fetch(`${wooUrl}/orders/${order.id}`, {
+      method: "PUT",
 
-        headers: {
-          Authorization: `Basic ${auth}`,
-          "Content-Type": "application/json",
-        },
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/json",
+      },
 
-        body: JSON.stringify({
-          status: "processing",
-          set_paid: true,
-          transaction_id:
-            transactionId || reference,
-        }),
-      }
-    );
+      body: JSON.stringify({
+        status: "processing",
+        set_paid: true,
+        transaction_id: transactionId || reference,
+      }),
+    });
 
-    const updatedOrder =
-      await updateResponse.json();
+    const updatedOrder = await updateResponse.json();
 
     if (!updateResponse.ok) {
-      console.error(
-        "WooCommerce webhook update failed:",
-        updatedOrder
-      );
+      console.error("WooCommerce webhook update failed:", updatedOrder);
 
-      throw new Error(
-        "Could not update WooCommerce order."
-      );
+      throw new Error("Could not update WooCommerce order.");
     }
 
-    console.log(
-      "Payment webhook processed successfully:",
-      {
-        provider,
-        reference,
-        orderId: order.id,
-      }
-    );
+    console.log("Payment webhook processed successfully:", {
+      provider,
+      reference,
+      orderId: order.id,
+    });
 
     return NextResponse.json({
       received: true,
       updated: true,
     });
   } catch (error) {
-    console.error(
-      "Payment webhook error:",
-      error
-    );
+    console.error("Payment webhook error:", error);
 
     return NextResponse.json(
       {
         message:
-          error instanceof Error
-            ? error.message
-            : "Webhook processing failed.",
+          error instanceof Error ? error.message : "Webhook processing failed.",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

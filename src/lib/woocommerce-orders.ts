@@ -35,15 +35,15 @@ type RawWooOrder = {
  * orders from every customer, which is exactly the leak this guards against.
  */
 export async function getCustomerOrders(
-  customerId: number | string
+  customerId: number | string,
 ): Promise<CustomerOrder[]> {
   const numericId = Number(customerId);
 
   if (!numericId || !Number.isFinite(numericId)) return [];
 
-  const auth = Buffer.from(
-    `${consumerKey}:${consumerSecret}`
-  ).toString("base64");
+  const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString(
+    "base64",
+  );
 
   const res = await fetch(
     `${restUrl}/orders?customer=${numericId}&per_page=50`,
@@ -53,7 +53,7 @@ export async function getCustomerOrders(
         "Content-Type": "application/json",
       },
       cache: "no-store",
-    }
+    },
   );
 
   if (!res.ok) {

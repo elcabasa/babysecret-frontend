@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     console.error("Forgot password error:", error);
     return NextResponse.json(
       { message: "Could not process your request." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

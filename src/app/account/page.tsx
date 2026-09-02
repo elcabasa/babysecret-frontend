@@ -34,9 +34,7 @@ export default async function AccountPage() {
         )}
 
         <div className="glass-panel rounded-2xl p-8">
-          <h1 className="text-3xl font-medium text-[#102a43]">
-            Your account
-          </h1>
+          <h1 className="text-3xl font-medium text-[#102a43]">Your account</h1>
 
           <dl className="mt-6 space-y-3 text-sm">
             <div className="flex justify-between border-b border-[#e6edf7] pb-3">

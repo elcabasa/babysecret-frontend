@@ -6,7 +6,11 @@ import Link from "next/link";
 
 import { GoogleButton } from "./google-button";
 
-export function RegisterForm({ googleEnabled = true }: { googleEnabled?: boolean }) {
+export function RegisterForm({
+  googleEnabled = true,
+}: {
+  googleEnabled?: boolean;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [googleConflict, setGoogleConflict] = useState(false);

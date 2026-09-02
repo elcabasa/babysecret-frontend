@@ -13,7 +13,8 @@ export function FeaturedProductsSection({ products }: { products: Product[] }) {
             Their little routine starts here.
           </h2>
           <p className="mt-2 text-lg text-[#334f6d]">
-            Everyday essentials for bath time, moisturising, massage and everything in between.
+            Everyday essentials for bath time, moisturising, massage and
+            everything in between.
           </p>
         </div>
 

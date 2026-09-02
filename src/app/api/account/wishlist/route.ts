@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     if (!session?.user?.id) {
       return NextResponse.json(
         { message: "Authentication required" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     console.error("Save WooCommerce wishlist error:", error);
     return NextResponse.json(
       { message: "Could not save wishlist" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

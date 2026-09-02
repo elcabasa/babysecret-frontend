@@ -7,7 +7,13 @@ type WooProduct = {
   on_sale: boolean;
   sku?: string;
   description?: string;
-  prices: { price: string; regular_price?: string; sale_price?: string; currency_code?: string; currency_minor_unit: number };
+  prices: {
+    price: string;
+    regular_price?: string;
+    sale_price?: string;
+    currency_code?: string;
+    currency_minor_unit: number;
+  };
   images?: { src: string }[];
   categories?: { id?: number; name: string; slug?: string }[];
   short_description?: string;
@@ -15,7 +21,9 @@ type WooProduct = {
   is_purchasable?: boolean;
 };
 
-const storeApiUrl = process.env.NEXT_PUBLIC_WOOCOMMERCE_STORE_API_URL ?? "https://babysecret.com/wp-json/wc/store/v1";
+const storeApiUrl =
+  process.env.NEXT_PUBLIC_WOOCOMMERCE_STORE_API_URL ??
+  "https://babysecret.com/wp-json/wc/store/v1";
 
 const FALLBACK_IMAGE = "/logo.png";
 
@@ -26,23 +34,61 @@ function stripHtml(value?: string): string | undefined {
 function mapWooProduct(product: WooProduct): Product {
   const minorUnit = product.prices.currency_minor_unit ?? 2;
   const price = Number(product.prices.price) / 10 ** minorUnit;
-  const regularPrice = product.prices.regular_price ? Number(product.prices.regular_price) / 10 ** minorUnit : undefined;
-  return { id: String(product.id), slug: product.slug, name: product.name.replace(/&#038;/g, "&"), category: product.categories?.[0]?.slug ?? "", description: stripHtml(product.description) ?? stripHtml(product.short_description) ?? "", shortDescription: stripHtml(product.short_description), sku: product.sku, regularPrice, price, currency: "NGN", image: product.images?.[0]?.src ?? FALLBACK_IMAGE, images: product.images?.map((image) => image.src), stockStatus: product.is_in_stock === false ? "out-of-stock" : "in-stock", purchasable: product.is_purchasable, badge: product.on_sale ? "Sales" : undefined };
+  const regularPrice = product.prices.regular_price
+    ? Number(product.prices.regular_price) / 10 ** minorUnit
+    : undefined;
+  return {
+    id: String(product.id),
+    slug: product.slug,
+    name: product.name.replace(/&#038;/g, "&"),
+    category: product.categories?.[0]?.slug ?? "",
+    description:
+      stripHtml(product.description) ??
+      stripHtml(product.short_description) ??
+      "",
+    shortDescription: stripHtml(product.short_description),
+    sku: product.sku,
+    regularPrice,
+    price,
+    currency: "NGN",
+    image: product.images?.[0]?.src ?? FALLBACK_IMAGE,
+    images: product.images?.map((image) => image.src),
+    stockStatus: product.is_in_stock === false ? "out-of-stock" : "in-stock",
+    purchasable: product.is_purchasable,
+    badge: product.on_sale ? "Sales" : undefined,
+  };
 }
 
-type ProductQuery = { page?: number; perPage?: number; category?: string; search?: string; order?: "asc" | "desc"; orderby?: "date" | "price" | "popularity" };
-export interface ProductListResponse { products: Product[]; page: number; totalPages: number; totalProducts: number; }
+type ProductQuery = {
+  page?: number;
+  perPage?: number;
+  category?: string;
+  search?: string;
+  order?: "asc" | "desc";
+  orderby?: "date" | "price" | "popularity";
+};
+export interface ProductListResponse {
+  products: Product[];
+  page: number;
+  totalPages: number;
+  totalProducts: number;
+}
 
 export function categorySlug(category: string) {
-  return category.toLowerCase().replace(/\s*&\s*/g, "-and-").replace(/\s+/g, "-");
+  return category
+    .toLowerCase()
+    .replace(/\s*&\s*/g, "-and-")
+    .replace(/\s+/g, "-");
 }
 
-export async function getProducts(query: ProductQuery = {}): Promise<Product[]> {
+export async function getProducts(
+  query: ProductQuery = {},
+): Promise<Product[]> {
   return (await getProductList(query)).products;
 }
 
 export async function getProductList(
-  query: ProductQuery = {}
+  query: ProductQuery = {},
 ): Promise<ProductListResponse> {
   const page = query.page ?? 1;
   const perPage = query.perPage ?? 24;
@@ -58,14 +104,11 @@ export async function getProductList(
     params.set("search", query.search.trim());
   }
 
-  const response = await fetch(
-    `${storeApiUrl}/products?${params.toString()}`,
-    {
-      next: {
-        revalidate: 300,
-      },
-    }
-  );
+  const response = await fetch(`${storeApiUrl}/products?${params.toString()}`, {
+    next: {
+      revalidate: 300,
+    },
+  });
 
   if (!response.ok) {
     throw new Error(`WooCommerce returned ${response.status}`);
@@ -77,20 +120,16 @@ export async function getProductList(
 
   const filteredProducts = query.category
     ? mapped.filter(
-        (product) =>
-          categorySlug(product.category) === query.category
+        (product) => categorySlug(product.category) === query.category,
       )
     : mapped;
 
   return {
     products: filteredProducts,
     page,
-    totalPages: Number(
-      response.headers.get("X-WP-TotalPages") ?? 1
-    ),
+    totalPages: Number(response.headers.get("X-WP-TotalPages") ?? 1),
     totalProducts: Number(
-      response.headers.get("X-WP-Total") ??
-        filteredProducts.length
+      response.headers.get("X-WP-Total") ?? filteredProducts.length,
     ),
   };
 }
@@ -100,14 +139,20 @@ export async function getFeaturedProducts(): Promise<Product[]> {
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
-  const response = await fetch(`${storeApiUrl}/products?slug=${encodeURIComponent(slug)}`, { next: { revalidate: 60 } });
+  const response = await fetch(
+    `${storeApiUrl}/products?slug=${encodeURIComponent(slug)}`,
+    { next: { revalidate: 60 } },
+  );
   if (!response.ok) return null;
   const products = (await response.json()) as WooProduct[];
   return products[0] ? mapWooProduct(products[0]) : null;
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
-  const response = await fetch(`${storeApiUrl}/products/${encodeURIComponent(id)}`, { next: { revalidate: 60 } });
+  const response = await fetch(
+    `${storeApiUrl}/products/${encodeURIComponent(id)}`,
+    { next: { revalidate: 60 } },
+  );
   if (!response.ok) return null;
   return mapWooProduct((await response.json()) as WooProduct);
 }
@@ -119,7 +164,7 @@ export async function getProductCategories(): Promise<ProductCategory[]> {
       next: {
         revalidate: 300,
       },
-    }
+    },
   );
 
   if (!response.ok) {

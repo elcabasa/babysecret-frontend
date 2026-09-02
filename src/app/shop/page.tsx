@@ -26,20 +26,18 @@ export default async function ShopPage({
 
   const orderby = sort.startsWith("price") ? "price" : "date";
 
-  const [
-    { products, totalPages, totalProducts },
-    categories,
-  ] = await Promise.all([
-    getProductList({
-      page,
-      perPage: 24,
-      search,
-      category,
-      orderby,
-      order: sort === "price-asc" ? "asc" : "desc",
-    }),
-    getProductCategories(),
-  ]);
+  const [{ products, totalPages, totalProducts }, categories] =
+    await Promise.all([
+      getProductList({
+        page,
+        perPage: 24,
+        search,
+        category,
+        orderby,
+        order: sort === "price-asc" ? "asc" : "desc",
+      }),
+      getProductCategories(),
+    ]);
 
   return (
     <main className="min-h-screen bg-[#f9fcff] px-6 pb-20 pt-36 sm:px-10">

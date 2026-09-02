@@ -18,11 +18,7 @@ export function SignOutButton({
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleSignOut}
-      className={className}
-    >
+    <button type="button" onClick={handleSignOut} className={className}>
       {children}
     </button>
   );

@@ -17,9 +17,11 @@ const GOOGLE_ACCOUNT_MESSAGE =
 
 export async function loginAction(
   _prevState: { error?: string },
-  formData: FormData
+  formData: FormData,
 ): Promise<{ error?: string }> {
-  const email = String(formData.get("email") ?? "").toLowerCase().trim();
+  const email = String(formData.get("email") ?? "")
+    .toLowerCase()
+    .trim();
   const password = String(formData.get("password") ?? "");
 
   let user;
@@ -28,7 +30,7 @@ export async function loginAction(
   } catch (error) {
     const customer = await getCustomerByEmail(email);
     const provider = customer?.meta_data?.find(
-      (meta) => meta.key === "auth_provider"
+      (meta) => meta.key === "auth_provider",
     )?.value;
 
     if (provider === "google") {
@@ -45,7 +47,8 @@ export async function loginAction(
           };
         case "AUTH_NETWORK_ERROR":
           return {
-            error: "We could not reach the store. Please check your connection and try again.",
+            error:
+              "We could not reach the store. Please check your connection and try again.",
           };
         case "ACCOUNT_NOT_FOUND":
           return { error: "No account was found for this email." };
