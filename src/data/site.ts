@@ -1,3 +1,24 @@
-export const siteConfig = { name: "Baby Secret", url: "https://babysecret-frontend.vercel.app", phone: "+2347030003057", displayPhone: "(+234) 703-000-3057", email: "hello@babysecret.com", tagline: "Gentle care for every little moment.", primaryMarket: "Nigeria", currency: "NGN" };
+export const siteConfig = {
+  name: "Baby Secret",
+  url: "https://babysecret-frontend.vercel.app",
+  phone: "+2347030003057",
+  displayPhone: "(+234) 703-000-3057",
+  email: "hello@babysecret.com",
+  tagline: "Gentle care for every little moment.",
+  primaryMarket: "Nigeria",
+  currency: "NGN",
+};
 export const socialLinks: { platform: string; url: string }[] = [];
-export const businessContent = { about: { parentBrand: "Flawless Cosmetics", qualityNote: "Baby Secret products are described by the brand as produced and packaged in Germany according to European Union standards for child-care products." }, policies: { shippingStatus: "Shipping areas, costs, and delivery timelines are awaiting final business confirmation.", returnsStatus: "Returns and refund conditions are awaiting final business confirmation." } };
+export const businessContent = {
+  about: {
+    parentBrand: "Flawless Cosmetics",
+    qualityNote:
+      "Baby Secret products are described by the brand as produced and packaged in Germany according to European Union standards for child-care products.",
+  },
+  policies: {
+    shippingStatus:
+      "Shipping areas, costs, and delivery timelines are awaiting final business confirmation.",
+    returnsStatus:
+      "Returns and refund conditions are awaiting final business confirmation.",
+  },
+};

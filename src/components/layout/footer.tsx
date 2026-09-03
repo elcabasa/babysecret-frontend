@@ -1,4 +1,90 @@
 import Link from "next/link";
 import { Mail, Phone } from "lucide-react";
 import { siteConfig } from "@/data/site";
-export function Footer() { return <footer className="bg-[#030507] px-6 py-16 text-white sm:px-10"><div className="mx-auto grid max-w-[1200px] gap-12 md:grid-cols-[2fr_1fr_1fr_1fr]"><div><h2 className="text-xl font-semibold">{siteConfig.name}</h2><p className="mt-5 text-sm text-white/60">{siteConfig.tagline}</p><p className="mt-6 max-w-sm text-sm text-white/60">Thoughtful baby and children&apos;s care for the little moments families cherish.</p><div className="mt-6 grid gap-3 text-sm text-white/70"><a className="inline-flex items-center gap-2 hover:text-white" href={`tel:${siteConfig.phone}`}><Phone size={15} />{siteConfig.displayPhone}</a><a className="inline-flex items-center gap-2 hover:text-white" href={`mailto:${siteConfig.email}`}><Mail size={15} />{siteConfig.email}</a></div></div><div><h3 className="font-medium">Shop</h3><div className="mt-5 space-y-3 text-sm text-white/60"><Link className="block" href="/shop">All Products</Link><Link className="block" href="/shop/bath-and-wash">Bath &amp; Wash</Link><Link className="block" href="/shop/baby-care">Baby Care</Link><Link className="block" href="/shop/hygiene">Hygiene</Link></div></div><div><h3 className="font-medium">Help</h3><div className="mt-5 space-y-3 text-sm text-white/60"><Link className="block" href="/contact">Contact Us</Link><Link className="block" href="/shipping">Delivery</Link><Link className="block" href="/returns">Returns</Link><Link className="block" href="/faq">FAQs</Link></div></div><div><h3 className="font-medium">Discover</h3><div className="mt-5 space-y-3 text-sm text-white/60"><Link className="block" href="/about">Our Story</Link><Link className="block" href="/blog">Baby Care Guide</Link><Link className="block" href="/wishlist">Wishlist</Link></div></div></div><div className="mx-auto mt-14 flex max-w-[1200px] flex-col justify-between gap-3 border-t border-white/10 pt-6 text-xs text-white/40 sm:flex-row"><span>© 2026 Baby Secret. All rights reserved.</span><div className="flex gap-4"><Link href="/privacy">Privacy Policy</Link><Link href="/terms">Terms &amp; Conditions</Link></div></div></footer>; }
+export function Footer() {
+  return (
+    <footer className="bg-[#030507] px-6 py-16 text-white sm:px-10">
+      <div className="mx-auto grid max-w-[1200px] grid-cols-[2fr_1fr_1fr_1fr] gap-8">
+        <div>
+          <h2 className="text-xl font-semibold">{siteConfig.name}</h2>
+          <p className="mt-5 text-sm text-white/60">{siteConfig.tagline}</p>
+          <p className="mt-6 max-w-sm text-sm text-white/60">
+            Thoughtful baby and children&apos;s care for the little moments
+            families cherish.
+          </p>
+          <div className="mt-6 grid gap-3 text-sm text-white/70">
+            <a
+              className="inline-flex items-center gap-2 hover:text-white"
+              href={`tel:${siteConfig.phone}`}
+            >
+              <Phone size={15} />
+              {siteConfig.displayPhone}
+            </a>
+            <a
+              className="inline-flex items-center gap-2 hover:text-white"
+              href={`mailto:${siteConfig.email}`}
+            >
+              <Mail size={15} />
+              {siteConfig.email}
+            </a>
+          </div>
+        </div>
+        <div>
+          <h3 className="font-medium">Shop</h3>
+          <div className="mt-5 space-y-3 text-sm text-white/60">
+            <Link className="block" href="/shop">
+              All Products
+            </Link>
+            <Link className="block" href="/shop/bath-and-wash">
+              Bath &amp; Wash
+            </Link>
+            <Link className="block" href="/shop/baby-care">
+              Baby Care
+            </Link>
+            <Link className="block" href="/shop/hygiene">
+              Hygiene
+            </Link>
+          </div>
+        </div>
+        <div>
+          <h3 className="font-medium">Help</h3>
+          <div className="mt-5 space-y-3 text-sm text-white/60">
+            <Link className="block" href="/contact">
+              Contact Us
+            </Link>
+            <Link className="block" href="/shipping">
+              Delivery
+            </Link>
+            <Link className="block" href="/returns">
+              Returns
+            </Link>
+            <Link className="block" href="/faq">
+              FAQs
+            </Link>
+          </div>
+        </div>
+        <div>
+          <h3 className="font-medium">Discover</h3>
+          <div className="mt-5 space-y-3 text-sm text-white/60">
+            <Link className="block" href="/about">
+              Our Story
+            </Link>
+            <Link className="block" href="/blog">
+              Baby Care Guide
+            </Link>
+            <Link className="block" href="/wishlist">
+              Wishlist
+            </Link>
+          </div>
+        </div>
+      </div>
+      <div className="mx-auto mt-14 flex max-w-[1200px] flex-col justify-between gap-3 border-t border-white/10 pt-6 text-xs text-white/40 sm:flex-row">
+        <span>© 2026 Baby Secret. All rights reserved.</span>
+        <div className="flex gap-4">
+          <Link href="/privacy">Privacy Policy</Link>
+          <Link href="/terms">Terms &amp; Conditions</Link>
+        </div>
+      </div>
+    </footer>
+  );
+}
