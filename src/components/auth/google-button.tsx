@@ -3,6 +3,7 @@
 import { useFormStatus } from "react-dom";
 
 import { googleAction } from "@/lib/auth.actions";
+import { AUTH_WELCOME_MESSAGE, queueAuthToast } from "@/lib/auth-toast";
 
 function GoogleIcon() {
   return (
@@ -32,6 +33,7 @@ function Submit() {
   return (
     <button
       type="submit"
+      onClick={() => queueAuthToast(AUTH_WELCOME_MESSAGE)}
       disabled={pending}
       className="flex w-full items-center justify-center gap-3 rounded-full border border-[#d6e0f0] bg-white px-5 py-3 text-sm font-semibold text-[#102a43] transition hover:bg-[#f3f7ff] disabled:opacity-60"
     >

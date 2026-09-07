@@ -14,15 +14,15 @@ Key modules:
 
 ## Environment
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `AUTH_SECRET` | yes | JWT signing secret |
-| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | for Google | Google OAuth app |
-| `NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED` | no | `"true"` renders the Google button |
-| `NEXT_PUBLIC_APP_URL` | no | Base URL for emailed reset links |
-| `AUTH_TRUST_HOST` | for non-Vercel | Lets NextAuth trust the host (`trustHost: true` is set in `src/auth.ts`; Vercel auto-sets it) |
-| `BREVO_API_KEY` / `SMTP_FROM` | for email | OTP/reset delivery via Brevo |
-| `WOOCOMMERCE_REST_URL` + consumer key/secret | yes | Customer CRUD + auth |
+| Variable                                     | Required       | Purpose                                                                                       |
+| -------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------- |
+| `AUTH_SECRET`                                | yes            | JWT signing secret                                                                            |
+| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`      | for Google     | Google OAuth app                                                                              |
+| `NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED`           | no             | `"true"` renders the Google button                                                            |
+| `NEXT_PUBLIC_APP_URL`                        | no             | Base URL for emailed reset links                                                              |
+| `AUTH_TRUST_HOST`                            | for non-Vercel | Lets NextAuth trust the host (`trustHost: true` is set in `src/auth.ts`; Vercel auto-sets it) |
+| `BREVO_API_KEY` / `SMTP_FROM`                | for email      | OTP/reset delivery via Brevo                                                                  |
+| `WOOCOMMERCE_REST_URL` + consumer key/secret | yes            | Customer CRUD + auth                                                                          |
 
 ## Sign-up flow (email + password)
 
@@ -37,7 +37,12 @@ Key modules:
      "password": "...",
      "first_name": "...",
      "last_name": "...",
-     "billing": { "email": "...", "first_name": "...", "last_name": "...", "phone": "..." },
+     "billing": {
+       "email": "...",
+       "first_name": "...",
+       "last_name": "...",
+       "phone": "..."
+     },
      "shipping": { "first_name": "...", "last_name": "..." },
      "meta_data": [
        { "key": "auth_provider", "value": "password" },
@@ -55,9 +60,9 @@ Key modules:
 
 - **Credentials:** `loginAction` authenticates against WooCommerce (JWT auth endpoint) and reads the customer meta.
   - If the email is **not verified**, the user is redirected to `/verify-email`. Accounts created before email verification existed (no `email_verified` meta) are treated as **verified**, so existing storefront customers can sign in immediately.
-  - If the customer is **Google-created** (`auth_provider = google`), the action returns the inline alert *"This account uses Google Sign-In. Please log in using the Google button."*
+  - If the customer is **Google-created** (`auth_provider = google`), the action returns the inline alert _"This account uses Google Sign-In. Please log in using the Google button."_
   - The WooCommerce auth layer (`src/lib/woocommerce-auth.ts`) logs the **real** JWT endpoint status + error code server-side and classifies failures (`INVALID_CREDENTIALS`, `AUTH_ENDPOINT_NOT_FOUND`, `AUTH_SERVER_ERROR`, `AUTH_NETWORK_ERROR`, `ACCOUNT_NOT_FOUND`) into safe, meaningful messages.
-  - On success the session is created and the client is redirected to `/?auth_success=Welcome back!`.
+  - On success the session is created, the client is redirected to the homepage, and a "Welcome back!" toast is queued in `sessionStorage` and auto-dismissed after a few seconds.
 - **Google:** `googleAction` starts the OAuth flow. The `signIn` callback in `src/auth.ts`:
   - Looks up the customer by email. If it does **not** exist, it creates one from the Google profile (`name` split into `first_name`/`last_name`, `email`), with `auth_provider = google`, `email_verified = true`, and a random password.
   - If the customer exists with `auth_provider = password`, it rejects the sign-in (`ACCOUNT_PASSWORD_COLLISION`) so the user signs in with their password instead.

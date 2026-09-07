@@ -5,7 +5,7 @@ import { Header } from "@/components/layout/header";
 
 const heroImage = "/hero-scene.png";
 
-export function HeroSection({ authSuccess }: { authSuccess?: string }) {
+export function HeroSection() {
   return (
     <section className="relative overflow-hidden bg-[#c9e7fb]">
       <div className="relative aspect-[2880/1926] w-full md:absolute md:inset-0 md:aspect-auto">
@@ -20,12 +20,6 @@ export function HeroSection({ authSuccess }: { authSuccess?: string }) {
       </div>
 
       <div className="absolute inset-0 bg-gradient-to-r from-white/40 via-white/10 to-transparent" />
-
-      {authSuccess && (
-        <div className="absolute left-1/2 top-2 z-[1] -translate-x-1/2 whitespace-nowrap rounded-full bg-white/90 px-5 py-1.5 text-sm font-semibold text-green-700 shadow-sm">
-          {authSuccess}
-        </div>
-      )}
 
       <Header />
 

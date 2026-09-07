@@ -10,7 +10,7 @@ import {
   WooCommerceAuthError,
 } from "@/lib/woocommerce-auth";
 
-const homeRedirect = `/?auth_success=${encodeURIComponent("Welcome back!")}`;
+const homeRedirect = "/";
 
 const GOOGLE_ACCOUNT_MESSAGE =
   "This account uses Google Sign-In. Please log in using the Google button.";
