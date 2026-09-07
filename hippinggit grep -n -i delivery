@@ -1,0 +1,18 @@
+[35m.env.example[m[36m:[m[32m32[m[36m:[m# Shipping / logistics ([1;31mTerminal[m Africa TShip)
+[35m.env.example[m[36m:[m[32m38[m[36m:[m[1;31mTERMINAL[m_API_KEY=
+[35m.env.example[m[36m:[m[32m39[m[36m:[m[1;31mTERMINAL[m_API_BASE=https://api.[1;31mterminal[m.africa/v1
+[35mREADME.md[m[36m:[m[32m20[m[36m:[m- **Delivery quotes** — [1;31mTerminal[m Africa (TShip) live rates, store shipping-zone rates (WooCommerce), or mock demo rates
+[35mREADME.md[m[36m:[m[32m31[m[36m:[m- Optional: Google OAuth app, Brevo API key, TShip ([1;31mTerminal[m Africa) key, Paystack/Flutterwave keys
+[35mREADME.md[m[36m:[m[32m73[m[36m:[m| `[1;31mTERMINAL[m_API_KEY` / `[1;31mTERMINAL[m_API_BASE` | [1;31mTerminal[m Africa TShip credentials |
+[35mdev.err[m[36m:[m[32m185[m[36m:[m    at [1;31mTerminal[mShipProvider.getQuotes (src\services\shipping\tship.service.ts:133:13)
+[35mdev.err[m[36m:[m[32m198[m[36m:[m    at [1;31mTerminal[mShipProvider.getQuotes (src\services\shipping\tship.service.ts:145:13)
+[35mdev.err[m[36m:[m[32m211[m[36m:[m    at [1;31mTerminal[mShipProvider.getQuotes (src\services\shipping\tship.service.ts:145:13)
+[35mdocs/PROJECT_MAP.md[m[36m:[m[32m127[m[36m:[m- `shipping.shipping.service.ts` — delivery quotes via [1;31mTerminal[m Africa TShip by default (API key required), with an optional WooCommerce shipping-zone provider (Store API cart flow) and a mock zone-based fallback; shipment arrangement after payment
+[35msrc/app/api/checkout/route.ts[m[36m:[m[32m232[m[36m:[m                  ? "[1;31mterminal[m_tship"
+[35msrc/services/shipping/shipping.service.ts[m[36m:[m[32m7[m[36m:[mimport { [1;31mTerminal[mShipProvider } from "@/services/shipping/tship.service";
+[35msrc/services/shipping/shipping.service.ts[m[36m:[m[32m119[m[36m:[m    return new [1;31mTerminal[mShipProvider();
+[35msrc/services/shipping/tship.service.ts[m[36m:[m[32m9[m[36m:[mconst apiBase = process.env.[1;31mTERMINAL[m_API_BASE ?? "https://api.[1;31mterminal[m.africa/v1";
+[35msrc/services/shipping/tship.service.ts[m[36m:[m[32m10[m[36m:[mconst apiKey = process.env.[1;31mTERMINAL[m_API_KEY;
+[35msrc/services/shipping/tship.service.ts[m[36m:[m[32m106[m[36m:[mexport class [1;31mTerminal[mShipProvider implements ShippingProvider {
+[35msrc/services/shipping/tship.service.ts[m[36m:[m[32m109[m[36m:[m      throw new Error("[1;31mTerminal[m Africa API key is not configured.");
+[35msrc/services/shipping/tship.service.ts[m[36m:[m[32m177[m[36m:[m      throw new Error("[1;31mTerminal[m Africa API key is not configured.");

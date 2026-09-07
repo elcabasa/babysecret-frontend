@@ -1,3 +1,23 @@
 "use client";
 import Link from "next/link";
-export default function CheckoutError({ reset }: { reset: () => void }) { return <main className="min-h-screen bg-[#f9fcff] px-6 pb-20 pt-36 sm:px-10"><div className="mx-auto max-w-xl rounded-2xl bg-white p-10 text-center shadow-sm"><h1 className="text-2xl font-semibold">Checkout needs another try</h1><p className="mt-3 text-[#334f6d]">Your cart is safe. Please try again.</p><button onClick={reset} className="mt-6 rounded-full bg-[#005dbd] px-6 py-3 font-semibold text-white">Try again</button><Link href="/cart" className="ml-3 font-semibold text-[#3051a0]">Back to cart</Link></div></main>; }
+export default function CheckoutError({ reset }: { reset: () => void }) {
+  return (
+    <main className="min-h-screen bg-[#f9fcff] px-6 pb-20 pt-36 sm:px-10">
+      <div className="mx-auto max-w-xl rounded-2xl bg-white p-10 text-center shadow-sm">
+        <h1 className="text-2xl font-semibold">Checkout needs another try</h1>
+        <p className="mt-3 text-[#334f6d]">
+          Your cart is safe. Please try again.
+        </p>
+        <button
+          onClick={reset}
+          className="mt-6 rounded-full bg-[#005dbd] px-6 py-3 font-semibold text-white"
+        >
+          Try again
+        </button>
+        <Link href="/cart" className="ml-3 font-semibold text-[#3051a0]">
+          Back to cart
+        </Link>
+      </div>
+    </main>
+  );
+}

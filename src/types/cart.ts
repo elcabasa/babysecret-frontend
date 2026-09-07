@@ -6,6 +6,7 @@ export interface CartItem {
   image: string;
   price: number;
   quantity: number;
+  stockStatus?: "in-stock" | "out-of-stock" | "on-backorder";
 }
 
 export type CartItemInput = Omit<CartItem, "quantity"> & { quantity?: number };
