@@ -28,7 +28,12 @@ export async function loginAction(
   try {
     ({ user } = await authenticateWooCommerce(email, password));
   } catch (error) {
-    const customer = await getCustomerByEmail(email);
+    let customer = null;
+    try {
+      customer = await getCustomerByEmail(email);
+    } catch {
+      customer = null;
+    }
     const provider = customer?.meta_data?.find(
       (meta) => meta.key === "auth_provider",
     )?.value;
@@ -84,15 +89,6 @@ export async function googleAction(): Promise<void> {
   try {
     await signIn("google", { redirectTo: homeRedirect });
   } catch (error) {
-    const collision =
-      error instanceof Error &&
-      (error.message.includes("ACCOUNT_PASSWORD_COLLISION") ||
-        error.message.includes("OAuthAccountNotLinked"));
-
-    if (collision) {
-      redirect("/login?error=ACCOUNT_PASSWORD_COLLISION");
-    }
-
     if (error instanceof AuthError) {
       return;
     }

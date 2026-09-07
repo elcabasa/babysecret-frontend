@@ -23,7 +23,7 @@ type WooProduct = {
 
 const storeApiUrl =
   process.env.NEXT_PUBLIC_WOOCOMMERCE_STORE_API_URL ??
-  "https://babysecret.com/wp-json/wc/store/v1";
+  "https://app.babysecret.com/wp-json/wc/store/v1";
 
 const FALLBACK_IMAGE = "/logo.png";
 
