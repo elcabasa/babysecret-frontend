@@ -1,4 +1,11 @@
 import type { Product, ProductCategory } from "@/types/product";
+import { featuredProducts } from "@/data/products";
+
+const mockProducts: Product[] = featuredProducts.map((product) => ({
+  ...product,
+  stockStatus: "in-stock",
+  purchasable: true,
+}));
 
 type WooProduct = {
   id: number;
@@ -87,6 +94,44 @@ export async function getProducts(
   return (await getProductList(query)).products;
 }
 
+function getMockProductList(query: ProductQuery = {}): ProductListResponse {
+  const page = query.page ?? 1;
+  const perPage = query.perPage ?? 24;
+
+  let filtered = mockProducts;
+
+  if (query.category) {
+    filtered = filtered.filter(
+      (product) => categorySlug(product.category) === query.category,
+    );
+  }
+
+  if (query.search?.trim()) {
+    const term = query.search.toLowerCase();
+    filtered = filtered.filter(
+      (product) =>
+        product.name.toLowerCase().includes(term) ||
+        product.description.toLowerCase().includes(term),
+    );
+  }
+
+  if (query.orderby === "price") {
+    filtered = [...filtered].sort((a, b) =>
+      query.order === "asc" ? a.price - b.price : b.price - a.price,
+    );
+  }
+
+  const start = (page - 1) * perPage;
+  const paged = filtered.slice(start, start + perPage);
+
+  return {
+    products: paged,
+    page,
+    totalPages: Math.max(1, Math.ceil(filtered.length / perPage)),
+    totalProducts: filtered.length,
+  };
+}
+
 export async function getProductList(
   query: ProductQuery = {},
 ): Promise<ProductListResponse> {
@@ -104,34 +149,38 @@ export async function getProductList(
     params.set("search", query.search.trim());
   }
 
-  const response = await fetch(`${storeApiUrl}/products?${params.toString()}`, {
-    next: {
-      revalidate: 300,
-    },
-  });
+  try {
+    const response = await fetch(`${storeApiUrl}/products?${params.toString()}`, {
+      next: {
+        revalidate: 300,
+      },
+    });
 
-  if (!response.ok) {
-    throw new Error(`WooCommerce returned ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`WooCommerce returned ${response.status}`);
+    }
+
+    const products = (await response.json()) as WooProduct[];
+
+    const mapped = products.map(mapWooProduct);
+
+    const filteredProducts = query.category
+      ? mapped.filter(
+          (product) => categorySlug(product.category) === query.category,
+        )
+      : mapped;
+
+    return {
+      products: filteredProducts,
+      page,
+      totalPages: Number(response.headers.get("X-WP-TotalPages") ?? 1),
+      totalProducts: Number(
+        response.headers.get("X-WP-Total") ?? filteredProducts.length,
+      ),
+    };
+  } catch {
+    return getMockProductList(query);
   }
-
-  const products = (await response.json()) as WooProduct[];
-
-  const mapped = products.map(mapWooProduct);
-
-  const filteredProducts = query.category
-    ? mapped.filter(
-        (product) => categorySlug(product.category) === query.category,
-      )
-    : mapped;
-
-  return {
-    products: filteredProducts,
-    page,
-    totalPages: Number(response.headers.get("X-WP-TotalPages") ?? 1),
-    totalProducts: Number(
-      response.headers.get("X-WP-Total") ?? filteredProducts.length,
-    ),
-  };
 }
 
 export async function getFeaturedProducts(): Promise<Product[]> {
@@ -139,57 +188,83 @@ export async function getFeaturedProducts(): Promise<Product[]> {
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
-  const response = await fetch(
-    `${storeApiUrl}/products?slug=${encodeURIComponent(slug)}`,
-    { next: { revalidate: 60 } },
-  );
-  if (!response.ok) return null;
-  const products = (await response.json()) as WooProduct[];
-  return products[0] ? mapWooProduct(products[0]) : null;
+  try {
+    const response = await fetch(
+      `${storeApiUrl}/products?slug=${encodeURIComponent(slug)}`,
+      { next: { revalidate: 60 } },
+    );
+    if (!response.ok) return null;
+    const products = (await response.json()) as WooProduct[];
+    return products[0] ? mapWooProduct(products[0]) : null;
+  } catch {
+    return mockProducts.find((product) => product.slug === slug) ?? null;
+  }
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
-  const response = await fetch(
-    `${storeApiUrl}/products/${encodeURIComponent(id)}`,
-    { next: { revalidate: 60 } },
-  );
-  if (!response.ok) return null;
-  return mapWooProduct((await response.json()) as WooProduct);
+  try {
+    const response = await fetch(
+      `${storeApiUrl}/products/${encodeURIComponent(id)}`,
+      { next: { revalidate: 60 } },
+    );
+    if (!response.ok) return null;
+    return mapWooProduct((await response.json()) as WooProduct);
+  } catch {
+    return mockProducts.find((product) => product.id === id) ?? null;
+  }
 }
 
 export async function getProductCategories(): Promise<ProductCategory[]> {
-  const response = await fetch(
-    `${storeApiUrl}/products/categories?per_page=100&hide_empty=true`,
-    {
-      next: {
-        revalidate: 300,
+  try {
+    const response = await fetch(
+      `${storeApiUrl}/products/categories?per_page=100&hide_empty=true`,
+      {
+        next: {
+          revalidate: 300,
+        },
       },
-    },
-  );
+    );
 
-  if (!response.ok) {
-    throw new Error(`WooCommerce returned ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`WooCommerce returned ${response.status}`);
+    }
+
+    const categories = (await response.json()) as {
+      id: number;
+      name: string;
+      slug: string;
+      count: number;
+      image?: {
+        src?: string;
+      };
+    }[];
+
+    return categories
+      .map((category) => ({
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        count: category.count,
+        image: category.image?.src,
+      }))
+      .filter((category) => (category.count ?? 0) > 0);
+  } catch {
+    const bySlug = new Map<string, ProductCategory>();
+    mockProducts.forEach((product, index) => {
+      const slug = categorySlug(product.category);
+      if (!bySlug.has(slug)) {
+        bySlug.set(slug, {
+          id: index,
+          name: product.category,
+          slug,
+          count: mockProducts.filter(
+            (p) => categorySlug(p.category) === slug,
+          ).length,
+        });
+      }
+    });
+    return [...bySlug.values()];
   }
-
-  const categories = (await response.json()) as {
-    id: number;
-    name: string;
-    slug: string;
-    count: number;
-    image?: {
-      src?: string;
-    };
-  }[];
-
-  return categories
-    .map((category) => ({
-      id: category.id,
-      name: category.name,
-      slug: category.slug,
-      count: category.count,
-      image: category.image?.src,
-    }))
-    .filter((category) => (category.count ?? 0) > 0);
 }
 
 export async function searchProducts(query: string): Promise<Product[]> {
@@ -198,3 +273,5 @@ export async function searchProducts(query: string): Promise<Product[]> {
 
   return getProducts({ perPage: 24, search: normalizedQuery });
 }
+
+export { mockProducts };
