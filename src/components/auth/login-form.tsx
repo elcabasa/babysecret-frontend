@@ -5,6 +5,7 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 
 import { GoogleButton } from "./google-button";
+import { AUTH_WELCOME_MESSAGE, queueAuthToast } from "@/lib/auth-toast";
 
 const errorMessages: Record<string, string> = {
   CredentialsSignin: "Invalid email or password.",
@@ -56,8 +57,10 @@ export function LoginForm({
         return;
       }
 
+      queueAuthToast(AUTH_WELCOME_MESSAGE);
+
       // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      window.location.href = `${window.location.origin}/?auth_success=${encodeURIComponent("Welcome back!")}`;
+      window.location.href = `${window.location.origin}/`;
     } catch {
       setPending(false);
       setErrorMessage("Something went wrong. Please try again.");
