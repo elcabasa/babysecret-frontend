@@ -11,7 +11,7 @@ export function ShopSearchForm({
 }: ShopSearchFormProps) {
   return (
     <form
-      className="glass-panel mb-8 flex max-w-xl gap-2 rounded-2xl p-1.5 sm:p-2"
+      className="glass-panel mb-8 flex max-w-xl gap-2 rounded-2xl p-2"
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();
@@ -25,9 +25,9 @@ export function ShopSearchForm({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder="Search products"
-        className="min-w-0 flex-1 bg-transparent px-3 py-1.5 text-sm outline-none sm:py-2"
+        className="min-w-0 flex-1 bg-transparent px-3 py-2 outline-none"
       />
-      <button className="rounded-full bg-[#3051a0] px-4 py-1.5 text-xs font-semibold text-white sm:px-5 sm:py-2 sm:text-sm">
+      <button className="rounded-full bg-[#3051a0] px-5 py-2 text-sm font-semibold text-white">
         Search
       </button>
     </form>

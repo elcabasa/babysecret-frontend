@@ -1,9 +1,10 @@
 import type { Product } from "@/types/product";
 
 const productImages = {
-  lotion: "/brand-story.png",
-  bath: "/hero-scene.png",
-  care: "/about-us-bg.png",
+  lotion:
+    "https://www.figma.com/api/mcp/asset/ce36a480-38a9-468d-938f-fb7784642d74.png",
+  bath: "https://www.figma.com/api/mcp/asset/2d7d7dcf-47dd-4138-9033-6bff1be492d7.png",
+  care: "https://www.figma.com/api/mcp/asset/ee47d358-db2e-4a16-8b37-e0415b6834ea.png",
 };
 
 export const featuredProducts: Product[] = [
