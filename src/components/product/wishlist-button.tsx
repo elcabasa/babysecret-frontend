@@ -26,7 +26,7 @@ export function WishlistButton({
       aria-pressed={saved}
       className={
         compact
-          ? "grid size-10 place-items-center rounded-full bg-white/90 text-[#3051a0] shadow-sm transition hover:bg-white"
+          ? "grid size-8 place-items-center rounded-full bg-white/90 text-[#3051a0] shadow-sm backdrop-blur-sm transition hover:bg-white sm:size-10"
           : "inline-flex items-center gap-2 rounded-full border border-[#3051a0] px-5 py-3 text-sm font-semibold text-[#3051a0]"
       }
     >

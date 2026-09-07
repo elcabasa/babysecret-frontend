@@ -32,12 +32,12 @@ export function AddToCartButton({
   if (unavailable && compact) {
     return (
       <div
-        className="flex size-10 items-center justify-center rounded-full border border-red-200 bg-red-50 p-1 text-center font-medium text-red-600 select-none cursor-not-allowed"
+        className="flex size-8 items-center justify-center rounded-full border border-red-200 bg-red-50 p-1 text-center font-medium text-red-600 select-none cursor-not-allowed sm:size-10"
         title="This product is currently out of stock"
         role="status"
         aria-label="Out of stock"
       >
-        <span className="text-[10px] leading-tight font-bold tracking-tighter uppercase">
+        <span className="text-[8px] leading-tight font-bold tracking-tighter uppercase sm:text-[10px]">
           Sold
           <br />
           Out
@@ -58,7 +58,7 @@ export function AddToCartButton({
       }
       className={
         compact
-          ? "grid size-10 place-items-center rounded-full bg-[#3051a0] text-white transition hover:bg-[#005dbd] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005dbd]"
+          ? "grid size-8 place-items-center rounded-full bg-[#3051a0] text-white transition hover:bg-[#005dbd] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005dbd] sm:size-10"
           : "inline-flex items-center gap-2 rounded-full bg-[#005dbd] px-8 py-4 font-semibold text-white transition hover:bg-[#004d9c] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005dbd]"
       }
     >

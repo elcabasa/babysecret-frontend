@@ -9,16 +9,16 @@ export function FeaturedProductsSection({ products }: { products: Product[] }) {
     <section className="px-6 py-20 sm:px-10">
       <div className="mx-auto max-w-[1200px]">
         <div className="mb-8">
-          <h2 className="text-4xl font-medium tracking-tight">
+          <h2 className="text-2xl font-medium tracking-tight sm:text-4xl">
             Their little routine starts here.
           </h2>
-          <p className="mt-2 text-lg text-[#334f6d]">
+          <p className="mt-2 text-sm text-[#334f6d] sm:text-lg">
             Everyday essentials for bath time, moisturising, massage and
             everything in between.
           </p>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
           {products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

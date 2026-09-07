@@ -40,7 +40,7 @@ export default async function ShopPage({
     ]);
 
   return (
-    <main className="min-h-screen bg-[#f9fcff] px-6 pb-20 pt-36 sm:px-10">
+    <main className="min-h-screen bg-gradient-to-b from-[#e6f1ff] via-[#f9fcff] to-[#f9fcff] px-6 pb-20 pt-36 sm:px-10">
       <Header />
 
       <div className="mx-auto max-w-[1200px]">

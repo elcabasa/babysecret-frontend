@@ -5,18 +5,18 @@ type PaginationProps = {
 };
 
 function pageButtonClasses(active: boolean) {
-  return `min-w-10 rounded-full px-4 py-2 text-sm font-medium transition ${
+  return `min-w-9 rounded-full px-3 py-1.5 text-xs font-medium transition sm:min-w-10 sm:px-4 sm:py-2 sm:text-sm ${
     active
       ? "bg-[#005dbd] text-white font-semibold border border-[#005dbd] shadow-sm"
-      : "border border-[#d6e0f0] bg-white text-[#102a43] hover:border-[#005dbd] hover:text-[#005dbd] hover:bg-[#f3f7ff]"
+      : "glass-control text-[#1f3a5f] hover:text-[#005dbd]"
   }`;
 }
 
 function edgeButtonClasses(disabled: boolean) {
-  return `rounded-full px-4 py-2 text-sm font-medium transition ${
+  return `rounded-full px-3 py-1.5 text-xs font-medium transition sm:px-4 sm:py-2 sm:text-sm ${
     disabled
-      ? "pointer-events-none opacity-40 border border-[#d6e0f0] bg-white text-[#62809e]"
-      : "border border-[#d6e0f0] bg-white text-[#102a43] hover:border-[#005dbd] hover:text-[#005dbd] hover:bg-[#f3f7ff]"
+      ? "glass-control pointer-events-none text-[#43617e] opacity-50"
+      : "glass-control text-[#1f3a5f] hover:text-[#005dbd]"
   }`;
 }
 

@@ -15,10 +15,10 @@ export function ShopCatalogHeader({
         <p className="text-xs font-semibold uppercase tracking-wide text-[#3051a0]">
           Catalog
         </p>
-        <h1 className="mt-3 text-5xl font-medium">
+        <h1 className="mt-3 text-3xl font-medium sm:text-5xl">
           Everyday care, made simple.
         </h1>
-        <p className="mt-3 max-w-xl text-[#334f6d]">
+        <p className="mt-3 max-w-xl text-sm text-[#334f6d] sm:text-base">
           {totalProducts} Baby Secret essentials for bath time, moisturising,
           massage, and gentle clean-ups.
         </p>
