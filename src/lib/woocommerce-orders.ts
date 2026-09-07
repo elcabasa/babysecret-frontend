@@ -1,5 +1,6 @@
 const restUrl =
-  process.env.WOOCOMMERCE_REST_URL ?? "https://babysecret.com/wp-json/wc/v3";
+  process.env.WOOCOMMERCE_REST_URL ??
+  "https://app.babysecret.com/wp-json/wc/v3";
 
 const consumerKey = process.env.WOOCOMMERCE_CONSUMER_KEY ?? "";
 const consumerSecret = process.env.WOOCOMMERCE_CONSUMER_SECRET ?? "";

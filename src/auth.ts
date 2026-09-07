@@ -99,33 +99,65 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return true;
       }
 
-      const email = String(
-        user.email ?? (profile as { email?: string })?.email ?? "",
-      )
+      console.log("[auth] Google callback started");
+
+      const googleProfile = profile as {
+        email?: string;
+        email_verified?: boolean;
+        given_name?: string;
+        family_name?: string;
+      };
+
+      const email = String(user.email ?? googleProfile.email ?? "")
         .toLowerCase()
         .trim();
+
+      console.log(`[auth] Google email: ${email || "(empty)"}`);
 
       if (!email) {
         console.error("[auth] Google sign-in failed: no email returned");
         return false;
       }
 
+      // Identity must come from Google's verified email claim, not a
+      // client-supplied address.
+      if (googleProfile.email_verified === false) {
+        console.error("[auth] Google sign-in failed: email is not verified");
+        return false;
+      }
+
       try {
+        console.log("[auth] WooCommerce customer lookup started");
         const existing = await getCustomerByEmail(email);
 
         // ------------------------------------------------------------
         // EXISTING CUSTOMER
         // ------------------------------------------------------------
         if (existing) {
+          console.log(
+            `[auth] WooCommerce customer found: ${existing.id}`,
+          );
+
           // Mark the email as verified because Google has verified it.
-          await updateWooCustomer(existing.id, {
-            meta_data: [
-              {
-                key: "email_verified",
-                value: "true",
-              },
-            ],
-          });
+          // Do not fail the sign-in if this metadata write fails — the
+          // Google identity is already proven and the password is untouched.
+          try {
+            console.log("[auth] WooCommerce customer update started");
+            await updateWooCustomer(existing.id, {
+              meta_data: [
+                {
+                  key: "email_verified",
+                  value: "true",
+                },
+              ],
+            });
+            console.log("[auth] WooCommerce customer update succeeded");
+          } catch (error) {
+            console.error(
+              "[auth] WooCommerce customer update failed; continuing sign-in:",
+              error,
+            );
+          }
 
           const record = user as Record<string, unknown>;
 
@@ -142,12 +174,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           record.role =
             existing.role === "administrator" ? "admin" : "customer";
 
-          console.log(
-            `[auth] Google sign-in successful for existing customer ${existing.id}`,
-          );
+          console.log("[auth] Google sign-in callback succeeded");
 
           return true;
         }
+
+        console.log("[auth] WooCommerce customer found: none");
 
         // ------------------------------------------------------------
         // NEW CUSTOMER
@@ -156,12 +188,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email,
 
           firstName:
-            (profile as { given_name?: string })?.given_name ??
-            user.name?.split(" ")[0] ??
-            "",
+            googleProfile.given_name ?? user.name?.split(" ")[0] ?? "",
 
           lastName:
-            (profile as { family_name?: string })?.family_name ??
+            googleProfile.family_name ??
             user.name?.split(" ").slice(1).join(" ") ??
             "",
 
@@ -183,6 +213,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         console.log(
           `[auth] Google sign-in successful: created customer ${created.id}`,
         );
+        console.log("[auth] Google sign-in callback succeeded");
 
         return true;
       } catch (error) {

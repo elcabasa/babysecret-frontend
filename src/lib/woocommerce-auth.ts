@@ -1,14 +1,15 @@
 import type { User } from "@/types/auth";
 
 const restUrl =
-  process.env.WOOCOMMERCE_REST_URL ?? "https://babysecret.com/wp-json/wc/v3";
+  process.env.WOOCOMMERCE_REST_URL ??
+  "https://app.babysecret.com/wp-json/wc/v3";
 
 const consumerKey = process.env.WOOCOMMERCE_CONSUMER_KEY ?? "";
 const consumerSecret = process.env.WOOCOMMERCE_CONSUMER_SECRET ?? "";
 
 const storeApiUrl =
   process.env.NEXT_PUBLIC_WOOCOMMERCE_STORE_API_URL ??
-  "https://babysecret.com/wp-json/wc/store/v1";
+  "https://app.babysecret.com/wp-json/wc/store/v1";
 
 const wpRoot = storeApiUrl.replace(/\/wp-json\/wc\/store\/v1\/?$/, "");
 
@@ -16,13 +17,6 @@ function authHeader(): Record<string, string> {
   return {
     Authorization: `Basic ${Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64")}`,
     "Content-Type": "application/json",
-  };
-}
-
-function formHeader(): Record<string, string> {
-  return {
-    Authorization: `Basic ${Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64")}`,
-    "Content-Type": "application/x-www-form-urlencoded",
   };
 }
 
@@ -47,6 +41,18 @@ export function toFormBody(obj: Record<string, unknown>): string {
     appendForm(params, key, value);
   }
   return params.toString();
+}
+
+async function readResponseText(response: Response): Promise<string> {
+  try {
+    return await response.text();
+  } catch {
+    return "";
+  }
+}
+
+function previewBody(text: string): string {
+  return text.slice(0, 400).replace(/\s+/g, " ");
 }
 
 type WooMetaData = { id?: number; key: string; value: unknown };
@@ -134,19 +140,29 @@ export function mapWooCustomer(customer: WooCustomer): User {
 export async function getCustomerByEmail(
   email: string,
 ): Promise<WooCustomer | null> {
+  const path = `/customers?email=${encodeURIComponent(email)}&per_page=1&role=all`;
+
+  let response: Response;
   try {
-    const response = await fetch(
-      `${restUrl}/customers?email=${encodeURIComponent(email)}&per_page=1`,
-      { headers: authHeader(), cache: "no-store" },
-    );
-
-    if (!response.ok) return null;
-
-    const list = (await response.json()) as WooCustomer[];
-    return Array.isArray(list) && list.length ? list[0] : null;
-  } catch {
-    return null;
+    response = await fetch(`${restUrl}${path}`, {
+      headers: authHeader(),
+      cache: "no-store",
+    });
+  } catch (error) {
+    console.error("[auth] WooCommerce customer lookup network error:", error);
+    throw new Error("WooCommerce customer lookup network error");
   }
+
+  if (!response.ok) {
+    const body = previewBody(await readResponseText(response));
+    console.error(
+      `[auth] WooCommerce customer lookup failed status=${response.status} path=/customers body=${body}`,
+    );
+    throw new Error(`WooCommerce customer lookup failed (${response.status})`);
+  }
+
+  const list = (await response.json()) as WooCustomer[];
+  return Array.isArray(list) && list.length ? list[0] : null;
 }
 
 export async function getCustomerById(
@@ -272,7 +288,7 @@ export async function authenticateWooCommerce(
 export async function createWooCustomer(
   input: CreateCustomerInput,
 ): Promise<User> {
-  const body = toFormBody({
+  const payload = {
     email: input.email,
     username: input.email,
     password: input.password,
@@ -292,17 +308,26 @@ export async function createWooCustomer(
       { key: "auth_provider", value: input.authProvider ?? "password" },
       { key: "email_verified", value: input.emailVerified ? "true" : "false" },
     ],
-  });
+  };
 
   const response = await fetch(`${restUrl}/customers`, {
     method: "POST",
-    headers: formHeader(),
-    body,
+    headers: authHeader(),
+    body: JSON.stringify(payload),
   });
 
-  const data = await response.json();
+  const raw = await readResponseText(response);
+  let data: { message?: string } & Partial<WooCustomer> = {};
+  try {
+    data = JSON.parse(raw) as { message?: string } & Partial<WooCustomer>;
+  } catch {
+    data = {};
+  }
 
   if (!response.ok) {
+    console.error(
+      `[auth] WooCommerce create customer failed status=${response.status} path=/customers body=${previewBody(raw)}`,
+    );
     throw new Error(data?.message ?? "Could not create your account.");
   }
 
@@ -315,13 +340,22 @@ export async function updateWooCustomer(
 ): Promise<User> {
   const response = await fetch(`${restUrl}/customers/${id}`, {
     method: "PUT",
-    headers: formHeader(),
-    body: toFormBody(fields),
+    headers: authHeader(),
+    body: JSON.stringify(fields),
   });
 
-  const data = await response.json();
+  const raw = await readResponseText(response);
+  let data: { message?: string } & Partial<WooCustomer> = {};
+  try {
+    data = JSON.parse(raw) as { message?: string } & Partial<WooCustomer>;
+  } catch {
+    data = {};
+  }
 
   if (!response.ok) {
+    console.error(
+      `[auth] WooCommerce update customer failed status=${response.status} path=/customers/${id} body=${previewBody(raw)}`,
+    );
     throw new Error(data?.message ?? "Could not update your account.");
   }
 
