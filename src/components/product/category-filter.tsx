@@ -7,10 +7,10 @@ type CategoryFilterProps = {
 };
 
 function pillClasses(isSelected: boolean) {
-  return `rounded-full px-3.5 py-1.5 text-xs font-medium transition-all sm:px-5 sm:py-2 sm:text-sm ${
+  return `rounded-full px-5 py-2 text-sm font-medium transition-all shadow-xs ${
     isSelected
       ? "bg-[#005dbd] text-white font-semibold border border-[#005dbd]"
-      : "glass-control text-[#1f3a5f] hover:text-[#005dbd]"
+      : "bg-white text-[#102a43] border border-[#d6e0f0] hover:border-[#005dbd] hover:text-[#005dbd] hover:bg-[#f3f7ff]"
   }`;
 }
 
