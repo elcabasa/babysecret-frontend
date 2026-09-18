@@ -28,17 +28,17 @@ The current catalog includes products such as baby wipes, sanitizing wipes, baby
 
 Verified public content routes include:
 
-| Route | Current reference |
-| --- | --- |
-| `/` | Home |
-| `/shop` | Shop |
-| `/product/[slug]` | WooCommerce product detail pattern |
-| `/cart` | Cart |
-| `/checkout` | Checkout |
-| `/my-account` | Account |
-| `/about-us` | About |
-| `/contact-us` | Contact |
-| `/secret-keeper-blog` | Secret Keeper Blog |
+| Route                 | Current reference                  |
+| --------------------- | ---------------------------------- |
+| `/`                   | Home                               |
+| `/shop`               | Shop                               |
+| `/product/[slug]`     | WooCommerce product detail pattern |
+| `/cart`               | Cart                               |
+| `/checkout`           | Checkout                           |
+| `/my-account`         | Account                            |
+| `/about-us`           | About                              |
+| `/contact-us`         | Contact                            |
+| `/secret-keeper-blog` | Secret Keeper Blog                 |
 
 FAQ, shipping, returns, distributor, wishlist, order-confirmation, and auth routes remain planned UI routes. Their final inclusion and content should follow the Figma/business requirements, with configurable placeholder policy copy where business policy is not confirmed.
 
@@ -124,6 +124,7 @@ Service contracts:
 - `order.service.ts` — mock checkout and confirmation
 - `customer.service.ts` — mock account/profile/address data
 - `content.service.ts` — blog, FAQ, policy, and brand content
+- `shipping.shipping.service.ts` — delivery quotes via Terminal Africa TShip by default (API key required), with an optional WooCommerce shipping-zone provider (Store API cart flow) and a mock zone-based fallback; shipment arrangement after payment
 
 WooCommerce is the intended backend. The owner manages products and stock in the WooCommerce dashboard; the frontend reads public catalog data through `src/services/product.service.ts`. Private WooCommerce REST credentials must never be exposed to the browser.
 

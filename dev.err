@@ -1,0 +1,222 @@
+Register error: SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+[browser] In HTML, <form> cannot be a descendant of <form>.
+This will cause a hydration error.
+
+  ...
+    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+      <LoadingBoundary name="login/" loading={null}>
+        <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+          <RedirectBoundary>
+            <RedirectErrorBoundary router={{...}}>
+              <InnerLayoutRouter url="/login" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+                <SegmentViewNode type="page" pagePath="login/page...">
+                  <SegmentTrieNode>
+                  <LoginPage>
+                    <main className="min-h-scre...">
+                      <Header>
+                      <div className="mx-auto ma...">
+                        <div className="glass-pane...">
+                          <h1>
+                          <p>
+                          <div className="mt-6">
+                            <LoginForm>
+>                             <form action={function bound dispatchActionState} className="flex flex-col gap-4">
+                                <label>
+                                <label>
+                                <button>
+                                <div>
+                                <GoogleButton>
+>                                 <form action={function googleAction}>
+                                ...
+                ...
+              ...
+    ...
+ 
+[browser] <form> cannot contain a nested <form>.
+See this log for the ancestor stack trace. 
+[browser] Uncaught Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+    at <unknown> (https://react.dev/link/hydration-mismatch)
+    at form (<anonymous>)
+    at GoogleButton (src/components/auth/google-button.tsx:46:5)
+    at LoginForm (src/components/auth/login-form.tsx:70:7)
+    at LoginPage (src\app\login\page.tsx:29:13)
+  44 | export function GoogleButton() {
+  45 |   return (
+> 46 |     <form action={googleAction}>
+     |     ^
+  47 |       <Submit />
+  48 |     </form>
+  49 |   );
+[browser] In HTML, <form> cannot be a descendant of <form>.
+This will cause a hydration error.
+
+  ...
+    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+      <LoadingBoundary name="login/" loading={null}>
+        <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+          <RedirectBoundary>
+            <RedirectErrorBoundary router={{...}}>
+              <InnerLayoutRouter url="/login" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+                <SegmentViewNode type="page" pagePath="login/page...">
+                  <SegmentTrieNode>
+                  <LoginPage>
+                    <main className="min-h-scre...">
+                      <Header>
+                      <div className="mx-auto ma...">
+                        <div className="glass-pane...">
+                          <h1>
+                          <p>
+                          <div className="mt-6">
+                            <LoginForm>
+>                             <form action={function bound dispatchActionState} className="flex flex-col gap-4">
+                                <label>
+                                <label>
+                                <button>
+                                <div>
+                                <GoogleButton>
+>                                 <form action={function googleAction}>
+                                ...
+                ...
+              ...
+    ...
+ 
+[browser] <form> cannot contain a nested <form>.
+See this log for the ancestor stack trace. 
+[browser] Uncaught Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+    at <unknown> (https://react.dev/link/hydration-mismatch)
+    at form (<anonymous>)
+    at GoogleButton (src/components/auth/google-button.tsx:46:5)
+    at LoginForm (src/components/auth/login-form.tsx:70:7)
+    at LoginPage (src\app\login\page.tsx:29:13)
+  44 | export function GoogleButton() {
+  45 |   return (
+> 46 |     <form action={googleAction}>
+     |     ^
+  47 |       <Submit />
+  48 |     </form>
+  49 |   );
+Delivery quote error: Error: One of your items could not be added for delivery.
+    at WooCommerceShippingProvider.getQuotes (src\services\shipping\woocommerce.service.ts:109:15)
+    at async getDeliveryQuotes (src\services\shipping\shipping.service.ts:135:12)
+    at async POST (src\app\api\shipping\quotes\route.ts:58:20)
+  107 |       });
+  108 |       if (!added.ok) {
+> 109 |         throw new Error("One of your items could not be added for delivery.");
+      |               ^
+  110 |       }
+  111 |       token = extractCartToken(added) ?? token;
+  112 |     }
+Delivery quote error: SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+[browser] ./src/app/api/checkout/route.ts:6:1
+Error: Export getShippingProviderName doesn't exist in target module
+  4 | ...t { getPaymentProvider } from "@/services/payment/payment.service";
+  5 | ...t { toFormBody } from "@/lib/woocommerce-auth";
+> 6 | ...t { getDeliveryQuotes, getShippingProviderName } from "@/services/shipping/shipping.serv...
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 | ...t { defaultPickupAddress, defaultItemWeightKg, countryToCode } from "@/services/shipping...
+  8 | ...t type { CheckoutDelivery } from "@/types/order";
+  9 | ...
+
+The export getShippingProviderName was not found in module [project]/src/services/shipping/shipping.service.ts [app-route] (ecmascript).
+Did you mean to import getShippingProvider?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. 
+[browser] ./src/services/shipping/woocommerce.service.ts:58:43
+Error: Expected '=>', got ':'
+  56 |     if (match?.[2]) return decodeURIComponent(match[2]);
+  57 |   }
+> 58 | }(address: DeliveryQuoteInput["delivery"]): StoreAddress {
+     |                                           ^
+  59 |   return {
+  60 |     first_name: address.firstName,
+  61 |     last_name: address.lastName,
+
+Parsing ecmascript source code failed
+
+Import trace:
+  App Route:
+    ./src/services/shipping/woocommerce.service.ts
+    ./src/services/shipping/shipping.service.ts
+    ./src/app/api/shipping/quotes/route.ts 
+Delivery quote error: Error: You cannot add &quot;BABY WIPES&quot; to the cart because the product is out of stock.
+    at WooCommerceShippingProvider.getQuotes (src\services\shipping\woocommerce.service.ts:117:15)
+    at async getDeliveryQuotes (src\services\shipping\shipping.service.ts:135:12)
+    at async POST (src\app\api\shipping\quotes\route.ts:58:20)
+  115 |       if (!added.ok) {
+  116 |         const detail = await added.json().catch(() => null);
+> 117 |         throw new Error(
+      |               ^
+  118 |           (detail as { message?: string } | null)?.message ??
+  119 |             `"${item.name}" could not be added for delivery.`
+  120 |         );
+Delivery quote error: Error: You cannot add &quot;BABY WIPES&quot; to the cart because the product is out of stock.
+    at WooCommerceShippingProvider.getQuotes (src\services\shipping\woocommerce.service.ts:117:15)
+    at async getDeliveryQuotes (src\services\shipping\shipping.service.ts:135:12)
+    at async POST (src\app\api\shipping\quotes\route.ts:58:20)
+  115 |       if (!added.ok) {
+  116 |         const detail = await added.json().catch(() => null);
+> 117 |         throw new Error(
+      |               ^
+  118 |           (detail as { message?: string } | null)?.message ??
+  119 |             `"${item.name}" could not be added for delivery.`
+  120 |         );
+Delivery quote error: Error: Missing pickup required fields: line2, email
+    at TerminalShipProvider.getQuotes (src\services\shipping\tship.service.ts:133:13)
+    at async getDeliveryQuotes (src\services\shipping\shipping.service.ts:135:12)
+    at async POST (src\app\api\shipping\quotes\route.ts:58:20)
+  131 |
+  132 |     if (!response.ok || result.status !== true) {
+> 133 |       throw new Error(
+      |             ^
+  134 |         result?.message ?? "Could not fetch delivery rates."
+  135 |       );
+  136 |     }
+Delivery quote error: SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+Delivery quote error: Error: Missing pickup required fields: line2, email
+    at TerminalShipProvider.getQuotes (src\services\shipping\tship.service.ts:145:13)
+    at async getDeliveryQuotes (src\services\shipping\shipping.service.ts:135:12)
+    at async POST (src\app\api\shipping\quotes\route.ts:58:20)
+  143 |
+  144 |     if (!response.ok || result.status !== true) {
+> 145 |       throw new Error(
+      |             ^
+  146 |         result?.message ?? "Could not fetch delivery rates."
+  147 |       );
+  148 |     }
+Delivery quote error: SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+Delivery quote error: Error: Missing pickup required fields: email
+    at TerminalShipProvider.getQuotes (src\services\shipping\tship.service.ts:145:13)
+    at async getDeliveryQuotes (src\services\shipping\shipping.service.ts:135:12)
+    at async POST (src\app\api\shipping\quotes\route.ts:67:20)
+  143 |
+  144 |     if (!response.ok || result.status !== true) {
+> 145 |       throw new Error(
+      |             ^
+  146 |         (result?.message as string | undefined) ?? "Could not fetch delivery rates."
+  147 |       );
+  148 |     }
+Delivery quote error: SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)

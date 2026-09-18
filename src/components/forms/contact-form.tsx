@@ -3,6 +3,85 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-const schema = z.object({ name: z.string().min(2, "Please enter your name"), email: z.string().email("Enter a valid email"), phone: z.string().optional(), subject: z.string().optional(), message: z.string().min(10, "Please tell us a little more") });
+const schema = z.object({
+  name: z.string().min(2, "Please enter your name"),
+  email: z.string().email("Enter a valid email"),
+  phone: z.string().optional(),
+  subject: z.string().optional(),
+  message: z.string().min(10, "Please tell us a little more"),
+});
 type ContactValues = z.infer<typeof schema>;
-export function ContactForm() { const [sent, setSent] = useState(false); const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ContactValues>({ resolver: zodResolver(schema) }); const onSubmit = async () => { await new Promise((resolve) => setTimeout(resolve, 500)); setSent(true); }; if (sent) return <div className="glass-panel mt-10 rounded-2xl p-8" role="status"><h2 className="text-xl font-semibold">Your message is ready to send.</h2><p className="mt-2 text-[#334f6d]">Contact delivery is not connected in this environment, so nothing has been sent yet. The form is ready for a future email or CRM service.</p></div>; const input = (name: keyof ContactValues, label: string, type = "text") => <label className="grid gap-2 text-sm" htmlFor={`contact-${name}`}>{label}<input id={`contact-${name}`} type={type} {...register(name)} className="glass-control rounded-xl px-4 py-3 outline-none" />{errors[name] && <span className="text-xs text-red-600" role="alert">{errors[name]?.message}</span>}</label>; return <form onSubmit={handleSubmit(onSubmit)} className="glass-panel mt-10 grid gap-5 rounded-2xl p-6 sm:grid-cols-2 sm:p-8">{input("name", "Name")}{input("email", "Email", "email")}{input("phone", "Phone (optional)", "tel")}{input("subject", "Subject")}<label className="grid gap-2 text-sm sm:col-span-2" htmlFor="contact-message">Message<textarea id="contact-message" {...register("message")} rows={6} className="glass-control rounded-xl px-4 py-3 outline-none" />{errors.message && <span className="text-xs text-red-600" role="alert">{errors.message.message}</span>}</label><button disabled={isSubmitting} className="rounded-full bg-[#005dbd] px-6 py-3 font-semibold text-white disabled:opacity-60 sm:col-span-2 sm:justify-self-start">{isSubmitting ? "Preparing..." : "Prepare message"}</button></form>; }
+export function ContactForm() {
+  const [sent, setSent] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ContactValues>({ resolver: zodResolver(schema) });
+  const onSubmit = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    setSent(true);
+  };
+  if (sent)
+    return (
+      <div className="glass-panel mt-10 rounded-2xl p-8" role="status">
+        <h2 className="text-xl font-semibold">
+          Your message is ready to send.
+        </h2>
+        <p className="mt-2 text-[#334f6d]">
+          Contact delivery is not connected in this environment, so nothing has
+          been sent yet. The form is ready for a future email or CRM service.
+        </p>
+      </div>
+    );
+  const input = (name: keyof ContactValues, label: string, type = "text") => (
+    <label className="grid gap-2 text-sm" htmlFor={`contact-${name}`}>
+      {label}
+      <input
+        id={`contact-${name}`}
+        type={type}
+        {...register(name)}
+        className="glass-control rounded-xl px-4 py-3 outline-none"
+      />
+      {errors[name] && (
+        <span className="text-xs text-red-600" role="alert">
+          {errors[name]?.message}
+        </span>
+      )}
+    </label>
+  );
+  return (
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="glass-panel mt-10 grid gap-5 rounded-2xl p-6 sm:grid-cols-2 sm:p-8"
+    >
+      {input("name", "Name")}
+      {input("email", "Email", "email")}
+      {input("phone", "Phone (optional)", "tel")}
+      {input("subject", "Subject")}
+      <label
+        className="grid gap-2 text-sm sm:col-span-2"
+        htmlFor="contact-message"
+      >
+        Message
+        <textarea
+          id="contact-message"
+          {...register("message")}
+          rows={6}
+          className="glass-control rounded-xl px-4 py-3 outline-none"
+        />
+        {errors.message && (
+          <span className="text-xs text-red-600" role="alert">
+            {errors.message.message}
+          </span>
+        )}
+      </label>
+      <button
+        disabled={isSubmitting}
+        className="rounded-full bg-[#005dbd] px-6 py-3 font-semibold text-white disabled:opacity-60 sm:col-span-2 sm:justify-self-start"
+      >
+        {isSubmitting ? "Preparing..." : "Prepare message"}
+      </button>
+    </form>
+  );
+}
