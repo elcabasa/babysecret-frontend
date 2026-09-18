@@ -4,6 +4,7 @@ import { siteConfig } from "@/data/site";
 import { Providers } from "@/components/auth/session-provider";
 import { auth } from "@/auth";
 import { UserDataSync } from "@/components/auth/user-data-sync";
+import { BottomNav } from "@/components/layout/bottom-nav";
 
 type RootLayoutProps = Readonly<{
   children: React.ReactNode;
@@ -34,9 +35,10 @@ export default async function RootLayout({ children }: RootLayoutProps) {
 
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col pb-16 md:pb-0">
         <Providers session={session}>
           <UserDataSync />
+          <BottomNav />
           {children}
         </Providers>
       </body>
