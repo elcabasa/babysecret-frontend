@@ -22,7 +22,7 @@ export function SearchControl() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="grid size-10 place-items-center rounded-full bg-white shadow-sm"
+        className="grid size-10 place-items-center rounded-full glass-control"
         aria-label={open ? "Close search" : "Open search"}
         aria-expanded={open}
       >
