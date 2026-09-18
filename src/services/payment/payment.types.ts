@@ -7,10 +7,19 @@ export interface PaymentInput {
   phoneNumber?: string;
 }
 
+export type PaymentMethod = "paystack" | "flutterwave" | "bank_transfer";
+
 export interface PaymentInitializationResult {
-  status: "not-configured" | "initialized";
+  status: "not-configured" | "initialized" | "awaiting_transfer";
   reference: string;
   authorizationUrl?: string;
+  bankDetails?: {
+    bankName: string;
+    accountName: string;
+    accountNumber: string;
+    amount: number;
+    reference: string;
+  };
 }
 
 export interface PaymentVerificationResult {

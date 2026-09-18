@@ -27,6 +27,7 @@ const checkoutSchema = z.object({
     address: z.string().min(5),
     apartment: z.string().optional(),
     notes: z.string().optional(),
+    paymentMethod: z.enum(["paystack", "flutterwave", "bank_transfer"]).optional(),
   }),
 
   items: z
@@ -171,19 +172,30 @@ export async function POST(request: Request) {
       );
     }
 
-    /*
+/*
      * Create a unique reference.
      * This will connect:
      *
      * WooCommerce Order
      *        ↓
-     * Paystack Transaction
+     * Payment Transaction
      */
     const reference = `babysecret-${Date.now()}`;
 
     const wooAuth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString(
       "base64",
     );
+
+    // Determine payment method from customer data (default to paystack)
+    const paymentMethod = customer.paymentMethod || "paystack";
+    const paymentMethodTitle =
+      paymentMethod === "paystack"
+        ? "Paystack"
+        : paymentMethod === "flutterwave"
+        ? "Flutterwave"
+        : "Bank Transfer (Moniepoint)";
+
+    const isBankTransfer = paymentMethod === "bank_transfer";
 
     /*
      * Create the WooCommerce order.
@@ -196,8 +208,8 @@ export async function POST(request: Request) {
     const session = await auth();
     const orderBody = toFormBody({
       customer_id: session?.user?.id ? Number(session.user.id) : undefined,
-      payment_method: "paystack",
-      payment_method_title: "Paystack",
+      payment_method: paymentMethod,
+      payment_method_title: paymentMethodTitle,
       set_paid: false,
       billing: {
         first_name: customer.firstName,
@@ -231,8 +243,8 @@ export async function POST(request: Request) {
                 getShippingProviderName() === "tship"
                   ? "terminal_tship"
                   : getShippingProviderName() === "shipbubble"
-                    ? "shipbubble_default"
-                    : delivery.rateId,
+                  ? "shipbubble_default"
+                  : delivery.rateId,
               method_title: delivery.carrier,
               total: String(delivery.amount),
             },
@@ -286,7 +298,8 @@ export async function POST(request: Request) {
 
     const callbackUrl = `${appUrl}/api/payment/verify?reference=${encodeURIComponent(reference)}`;
 
-    const paymentProvider = getPaymentProvider();
+    // Use the selected payment provider
+    const paymentProvider = getPaymentProvider(paymentMethod);
 
     const payment = await paymentProvider.initializePayment({
       email: customer.email,
@@ -297,6 +310,30 @@ export async function POST(request: Request) {
       phoneNumber: customer.phone,
     });
 
+    // Handle bank transfer differently - it returns awaiting_transfer status with bankDetails
+    if (isBankTransfer) {
+      if (payment.status !== "awaiting_transfer" || !payment.bankDetails) {
+        return NextResponse.json(
+          {
+            message: "Could not initialize bank transfer. Check the server logs.",
+          },
+          { status: 500 },
+        );
+      }
+
+      // For bank transfer, return bank details without authorizationUrl
+      return NextResponse.json({
+        success: true,
+
+        orderId: wooOrder.id,
+
+        reference,
+
+        bankDetails: payment.bankDetails,
+      });
+    }
+
+    // For Paystack/Flutterwave, require authorizationUrl
     if (payment.status !== "initialized" || !payment.authorizationUrl) {
       return NextResponse.json(
         {
@@ -307,7 +344,7 @@ export async function POST(request: Request) {
     }
 
     /*
-     * Return the Paystack URL to the frontend.
+     * Return the payment URL to the frontend.
      */
     return NextResponse.json({
       success: true,

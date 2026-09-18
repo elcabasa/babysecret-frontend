@@ -11,6 +11,7 @@ export interface CheckoutCustomer {
   address: string;
   apartment?: string;
   notes?: string;
+  paymentMethod?: "paystack" | "flutterwave" | "bank_transfer";
 }
 export interface CheckoutDelivery {
   rateId: string;

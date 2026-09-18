@@ -12,8 +12,11 @@ import { CartIssuesAlert } from "@/components/forms/cart-issues-alert";
 import { DeliveryMethods } from "@/components/forms/delivery-methods";
 import { FormField } from "@/components/forms/form-field";
 import { FormSelectField } from "@/components/forms/form-select-field";
+import { CreditCard, Building2 } from "lucide-react";
 
 type Location = { state: string; cities: string[] };
+
+type PaymentMethod = "paystack" | "flutterwave" | "bank_transfer";
 
 const schema = z.object({
   firstName: z.string().min(2, "Enter your first name"),
@@ -26,7 +29,24 @@ const schema = z.object({
   address: z.string().min(5, "Enter your delivery address"),
   apartment: z.string().optional(),
   notes: z.string().optional(),
-});
+  paymentMethod: z.enum(["paystack", "flutterwave", "bank_transfer"]).default("paystack"),
+}).transform((data) => ({
+  ...data,
+  paymentMethod: data.paymentMethod || "paystack",
+})) as z.ZodType<{
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  country: string;
+  state: string;
+  city: string;
+  address: string;
+  apartment?: string;
+  notes?: string;
+  paymentMethod: PaymentMethod;
+}>;
+
 type FormValues = z.infer<typeof schema>;
 
 export function CheckoutForm() {
@@ -59,6 +79,7 @@ export function CheckoutForm() {
     resolver: zodResolver(schema),
     defaultValues: {
       country: "Nigeria",
+      paymentMethod: "paystack" as PaymentMethod,
     },
   });
 
@@ -168,7 +189,8 @@ export function CheckoutForm() {
     resetDelivery,
   ]);
 
-  const onSubmit = async (customer: CheckoutCustomer) => {
+  const onSubmit = async (data: FormValues) => {
+    const customer = data as CheckoutCustomer;
     if (!items.length) {
       setSubmitError("Your cart is empty.");
       return;
@@ -204,6 +226,7 @@ export function CheckoutForm() {
                 amount: selectedQuote.amount,
               }
             : null,
+          paymentMethod: customer.paymentMethod || "paystack",
         }),
       });
 
@@ -212,6 +235,13 @@ export function CheckoutForm() {
         orderId?: number;
         reference?: string;
         authorizationUrl?: string;
+        bankDetails?: {
+          bankName: string;
+          accountName: string;
+          accountNumber: string;
+          amount: number;
+          reference: string;
+        };
         message?: string;
         unavailableItems?: {
           name: string;
@@ -241,9 +271,30 @@ export function CheckoutForm() {
         throw new Error(result.message ?? "Checkout could not be completed.");
       }
 
-      // Redirect the customer to Paystack
-      if (result.authorizationUrl) {
+      // Handle based on payment method
+      const paymentMethod = customer.paymentMethod || "paystack";
+
+      // Redirect to payment gateway (Paystack/Flutterwave)
+      if (paymentMethod !== "bank_transfer" && result.authorizationUrl) {
         window.location.replace(result.authorizationUrl);
+        return;
+      }
+
+      // Bank transfer - redirect to awaiting payment page
+      if (paymentMethod === "bank_transfer" && result.reference) {
+        clearCart();
+
+        const bankDetails = result.bankDetails;
+        const queryParams = new URLSearchParams({
+          reference: result.reference,
+          ...(bankDetails?.amount && { amount: String(bankDetails.amount) }),
+          ...(bankDetails?.bankName && { bankName: bankDetails.bankName }),
+          ...(bankDetails?.accountName && { accountName: bankDetails.accountName }),
+          ...(bankDetails?.accountNumber && { accountNumber: bankDetails.accountNumber }),
+        });
+
+        router.push(`/awaiting-payment?${queryParams.toString()}`);
+
         return;
       }
 
@@ -381,6 +432,61 @@ export function CheckoutForm() {
 
       <DeliveryMethods />
 
+      <div className="sm:col-span-2">
+        <h3 className="text-sm font-semibold">Payment method</h3>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          {(["paystack", "flutterwave", "bank_transfer"] as PaymentMethod[]).map(
+            (method) => (
+              <label
+                key={method}
+                className={`flex cursor-pointer items-center justify-between gap-4 rounded-xl border px-4 py-3 text-sm ${
+                  watched.paymentMethod === method
+                    ? "border-[#005dbd] bg-[#e7effc]"
+                    : "border-[#e5e3e3] bg-white"
+                }`}
+              >
+                <span className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    checked={watched.paymentMethod === method}
+                    onChange={() => setValue("paymentMethod", method, { shouldValidate: true })}
+                    className="text-[#005dbd] focus-visible:ring-2 focus-visible:ring-[#005dbd]"
+                  />
+                  <span className="flex flex-col">
+                    <span className="block font-semibold">
+                      {method === "paystack" && (
+                        <>
+                          <CreditCard className="inline-block size-4 mr-1" />
+                          Paystack
+                        </>
+                      )}
+                      {method === "flutterwave" && (
+                        <>
+                          <CreditCard className="inline-block size-4 mr-1" />
+                          Flutterwave
+                        </>
+                      )}
+                      {method === "bank_transfer" && (
+                        <>
+                          <Building2 className="inline-block size-4 mr-1" />
+                          Bank Transfer (Moniepoint)
+                        </>
+                      )}
+                    </span>
+                    <span className="block text-[11px] text-[#334f6d]">
+                      {method === "paystack" && "Pay with card or bank"}
+                      {method === "flutterwave" && "Pay with card, bank, or USSD"}
+                      {method === "bank_transfer" && "Manual transfer - we'll verify manually"}
+                    </span>
+                  </span>
+                </span>
+              </label>
+            ),
+          )}
+        </div>
+      </div>
+
       <label className="grid gap-2 text-sm sm:col-span-2" htmlFor="notes">
         Delivery notes (optional)
         <textarea
@@ -402,11 +508,19 @@ export function CheckoutForm() {
         disabled={submitting || !items.length}
         className="rounded-full bg-[#005dbd] px-6 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 sm:justify-self-start"
       >
-        {submitting ? "Redirecting to payment…" : "Continue to payment"}
+        {submitting
+          ? watched.paymentMethod === "bank_transfer"
+            ? "Creating order…"
+            : "Redirecting to payment…"
+          : watched.paymentMethod === "bank_transfer"
+          ? "Place order & get bank details"
+          : "Continue to payment"}
       </button>
 
       <p className="text-xs text-[#334f6d] sm:col-span-2">
-        You will be redirected to Paystack to complete your payment securely.
+        {watched.paymentMethod === "bank_transfer"
+          ? "You will receive bank transfer details after placing your order."
+          : "You will be redirected to complete your payment securely."}
       </p>
     </form>
   );

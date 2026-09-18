@@ -1,5 +1,6 @@
 import type {
   PaymentInitializationResult,
+  PaymentMethod,
   PaymentProvider,
   PaymentVerificationResult,
 } from "@/services/payment/payment.types";
@@ -203,7 +204,7 @@ class FlutterwavePaymentProvider implements PaymentProvider {
 }
 
 export function getPaymentProvider(
-  providerName?: "paystack" | "flutterwave",
+  providerName?: PaymentMethod,
 ): PaymentProvider {
   const provider = providerName || process.env.PAYMENT_PROVIDER;
 
@@ -215,5 +216,48 @@ export function getPaymentProvider(
     return new FlutterwavePaymentProvider();
   }
 
+  if (provider === "bank_transfer") {
+    return new BankTransferPaymentProvider();
+  }
+
   return new DemoPaymentProvider();
+}
+
+class BankTransferPaymentProvider implements PaymentProvider {
+  private bankName = process.env.MONIEPOINT_BANK_NAME || "Moniepoint Microfinance Bank";
+  private accountName = process.env.MONIEPOINT_ACCOUNT_NAME || "Baby Secret";
+  private accountNumber = process.env.MONIEPOINT_ACCOUNT_NUMBER || "1234567890";
+
+  async initializePayment(input: {
+    email: string;
+    amount: number;
+    reference: string;
+    callbackUrl?: string;
+    customerName?: string;
+    phoneNumber?: string;
+  }): Promise<PaymentInitializationResult> {
+    return {
+      status: "awaiting_transfer",
+      reference: input.reference,
+      bankDetails: {
+        bankName: this.bankName,
+        accountName: this.accountName,
+        accountNumber: this.accountNumber,
+        amount: input.amount,
+        reference: input.reference,
+      },
+    };
+  }
+
+  async verifyPayment(
+    reference: string,
+    _transactionId?: string,
+  ): Promise<PaymentVerificationResult> {
+    // Manual bank transfer - cannot auto-verify
+    // Order remains pending until admin manually confirms
+    return {
+      verified: false,
+      reference,
+    };
+  }
 }
