@@ -6,7 +6,6 @@ const shopLinks = [
   { href: "/shop", label: "All Products" },
   { href: "/shop/bath-and-wash", label: "Bath & Wash" },
   { href: "/shop/baby-care", label: "Baby Care" },
-  { href: "/shop/hygiene", label: "Hygiene" },
 ];
 const helpLinks = [
   { href: "/contact", label: "Contact Us" },
