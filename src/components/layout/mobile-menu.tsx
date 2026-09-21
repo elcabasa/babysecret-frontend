@@ -38,8 +38,8 @@ export function MobileMenu({
   onClose,
 }: MobileMenuProps) {
   return (
-    <nav className="glass-panel absolute left-4 right-4 top-24 z-20 rounded-2xl p-5 shadow-xl md:hidden">
-      <div className="grid gap-2 text-sm">
+    <nav className="mobile-menu-panel fixed inset-x-0 top-16 z-50 max-h-[calc(100vh-4rem)] overflow-y-auto rounded-none p-5 md:hidden">
+      <div className="mx-auto max-w-[390px] grid gap-2 text-sm">
         <div className="mb-2">
           <SearchControl />
         </div>
