@@ -14,9 +14,9 @@ Key modules:
 
 1. **Validation** — `validateCheckoutItems` re-fetches each product server-side and rejects unavailable items (`out-of-stock` / non-purchasable) and recalculates prices (flagging changes).
 2. **Order creation** — `POST /api/checkout` creates a WooCommerce order (`set_paid: false`) with billing/shipping addresses, line items, `shipping_lines`, customer note, and metadata (`_babysecret_paystack_reference`, shipping meta; see [`SHIPPING.md`](SHIPPING.md)).
-3. **Payment** — the authoritative order total initializes the gateway; see [`PAYMENTS.md`](PAYMENTS.md).
-4. **Verification** — on successful payment the order is flipped to `processing` / `set_paid: true` and (for TShip rates) a shipment is arranged.
-5. **Confirmation** — the shopper lands on `/order-confirmation?reference=…`.
+3. **Payment (Bank Transfer)** — the shopper is routed to `/awaiting-payment` with the receiving account and exact total, makes the transfer, then submits their transfer/payer name + transfer reference. `POST /api/payment/bank-transfer/confirm` records the details and keeps the order **`on-hold` (`set_paid: false`)**; see [`PAYMENTS.md`](PAYMENTS.md). Card-gateway payments (when re-enabled) redirect to the gateway and verify via `/api/payment/verify` instead.
+4. **Verification** — on successful card-gateway verification the order is flipped to `processing` / `set_paid: true` and (for TShip rates) a shipment is arranged. Bank-transfer orders move to `processing` only after an admin manually verifies the transfer.
+5. **Confirmation** — bank-transfer shoppers see the pending-verification state on `/awaiting-payment`; card-gateway shoppers land on `/order-confirmation?reference=…`.
 
 ## "My Orders" dashboard
 

@@ -16,9 +16,9 @@ Frontend for the Baby Secret e-commerce store, built with Next.js App Router, Re
 
 - **Catalog** — homepage, `/shop` with search, category filters and sorting, `/shop/[category]`, product detail pages
 - **Cart & wishlist** — persisted client-side with out-of-stock awareness
-- **Checkout** — validated address capture with Nigerian state/city selects, live delivery estimates, payment gateway redirect
-- **Delivery quotes** — Terminal Africa (TShip) live rates, store shipping-zone rates (WooCommerce), or mock demo rates
-- **Payments** — Paystack or Flutterwave (or a demo/no-op provider)
+- **Checkout** — validated address capture with Nigerian state/city selects, live Terminal Africa delivery estimates, bank-transfer payment
+- **Delivery quotes** — Terminal Africa (TShip) live rates only (Shipbubble implementation kept but disabled; WooCommerce-zone provider kept for fallback use)
+- **Payments** — Bank Transfer only (Paystack/Flutterwave integrations kept intact but hidden; re-enable via the payment-method config)
 - **Accounts** — email + password sign-up and sign-in with 6-digit email OTP verification, Google sign-in, forgot/reset password, `My Account` and `My Orders` dashboards
 - **Orders** — WooCommerce orders created at checkout, order history fetched per customer, order-confirmation screen
 
@@ -67,13 +67,14 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED` | `"true"` shows the "Continue with Google" button |
 | `NEXT_PUBLIC_APP_URL` | Public base URL (password-reset links, payment callbacks) |
 | `BREVO_API_KEY` / `SMTP_FROM` | Transactional email (OTP, reset links) via Brevo |
-| `PAYMENT_PROVIDER` | `paystack`, `flutterwave`, or unset/demo |
-| `PAYSTACK_SECRET_KEY` / `FLUTTERWAVE_SECRET_KEY` | Gateway secret keys |
-| `SHIPPING_PROVIDER` | `tship`, `woocommerce`, or unset → `mock` |
-| `TERMINAL_API_KEY` / `TERMINAL_API_BASE` | Terminal Africa TShip credentials |
+| `PAYMENT_PROVIDER` | Gateway name if card gateways are re-enabled (`paystack` / `flutterwave`); ignored by the current Bank Transfer-only UI |
+| `PAYSTACK_SECRET_KEY` / `FLUTTERWAVE_SECRET_KEY` | Gateway secret keys (server-only; kept for future re-enablement) |
+| Bank-transfer account | Hardcoded in `src/config/bank.ts` (`BANK_DETAILS`) — single source of truth for server + UI; not an env var, not a secret |
+| `SHIPPING_PROVIDER` | `tship` (only honored if listed in `ENABLED_SHIPPING_PROVIDERS`; anything else falls back to `tship`) |
+| `TERMINAL_API_KEY` / `TERMINAL_API_BASE` | Terminal Africa TShip credentials (server-only) |
+| `SHIPPUBBLE_API_KEY` / `SHIPPUBBLE_API_BASE` | Shipbubble credentials (kept for future re-enablement; currently unused — no Shipbubble API calls are made) |
 | `SHIPPING_PICKUP_*` | Store pickup origin used for delivery quotes |
 | `SHIPPING_ITEM_WEIGHT_KG` | Per-unit parcel weight (kg) used in quotes |
-| `SHIPPING_FALLBACK` | `mock` → fall back to demo rates on provider errors |
 
 See `.env.example` for the full list with comments.
 
@@ -88,25 +89,28 @@ src/
 │   │   ├── auth/[...nextauth]/  # NextAuth handlers
 │   │   ├── checkout/        # Create WC order + initialize payment
 │   │   ├── locations/       # Nigerian states/cities
-│   │   ├── payment/verify/  # Verify payment after gateway redirect
+│   │   ├── payment/verify/  # Verify gateway payment after redirect (card gateways, when re-enabled)
+│   │   ├── payment/bank-transfer/confirm/  # Submit transfer details; order stays on-hold
 │   │   ├── products/        # Store API product listing
-│   │   ├── shipping/quotes/ # Delivery quotes
+│   │   ├── shipping/quotes/ # Delivery quotes (Terminal Africa only)
 │   │   └── webhooks/payment/# Payment status webhook
 │   ├── (pages)              # /, /shop, /product/[slug], /cart, /checkout,
-│   │                        # /orders, /account, /login, /register, /verify-email, …
+│   │                        # /awaiting-payment, /orders, /account, /login, /register, /verify-email, …
 │   ├── auth.ts              # NextAuth config (Credentials + Google, callbacks)
 │   └── layout.tsx / globals.css
 ├── components/              # UI components (layout, cart, product, auth, forms, sections)
+├── config/                  # Client-safe config (bank-transfer receiving account)
 ├── data/                    # Static/site content (products, site config)
 ├── lib/                     # Server logic: woocommerce-auth, otp-store, email,
 │                            # reset-token-store, auth.actions, woocommerce-orders
 ├── services/                # Feature services
 │   ├── product.service.ts   # Catalog via Store API (mock fallback)
 │   ├── order.service.ts     # Checkout item validation
-│   ├── shipping/            # shipping.service (provider switch), tship.service,
+│   ├── shipping/            # shipping.service (enabled-provider list), tship.service,
+│   │                        # shipbubble.service (intact, currently disabled),
 │   │                        # woocommerce.service
-│   └── payment/             # payment.service (Paystack/Flutterwave/demo), types
-├── store/                   # Zustand stores (cart, wishlist)
+│   └── payment/             # payment.service (bank_transfer + Paystack/Flutterwave/demo), types
+├── store/                   # Zustand stores (cart, wishlist, delivery)
 └── types/                   # Shared TypeScript types
 ```
 
@@ -119,7 +123,7 @@ Pages/components  →  feature & service contracts  →  WooCommerce / gateway A
 - Catalog content and business data live in typed data/services (`src/data`, `src/services`), never hardcoded into presentational components.
 - Public, read-only catalog data is served via the WooCommerce **Store API**.
 - Server-only operations (customer creation, orders, order history, delivery arrangement) call the WooCommerce **REST v3 API** with `WOOCOMMERCE_CONSUMER_KEY`/`SECRET` — never exposed to the client.
-- Orders are created server-side at checkout and the authoritative total (from the created WooCommerce order) is used to initialize payment. Payment succeeds only when the gateway verification matches the stored reference.
+- Orders are created server-side at checkout and the authoritative total (from the created WooCommerce order) is used to initialize payment. Bank-transfer orders stay `on-hold` (pending) until the transfer is manually verified — the frontend never marks an order paid.
 
 ## API routes
 
@@ -132,7 +136,8 @@ Pages/components  →  feature & service contracts  →  WooCommerce / gateway A
 | `/api/account/forgot-password` | POST | Email a password-reset link |
 | `/api/account/reset-password` | POST | Set a new password with a valid token |
 | `/api/checkout` | POST | Create WooCommerce order + initialize payment |
-| `/api/payment/verify` | GET | Verify payment after gateway redirect |
+| `/api/payment/bank-transfer/confirm` | POST | Submit transfer details; keeps order `on-hold` for manual verification |
+| `/api/payment/verify` | GET | Verify payment after gateway redirect (card gateways, when re-enabled) |
 | `/api/webhooks/payment` | POST | Payment status webhook receiver |
 | `/api/shipping/quotes` | POST | Delivery rate quotes for a destination |
 | `/api/products` | GET | Product listing from the Store API |
