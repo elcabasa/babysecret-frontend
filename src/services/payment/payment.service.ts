@@ -4,6 +4,7 @@ import type {
   PaymentProvider,
   PaymentVerificationResult,
 } from "@/services/payment/payment.types";
+import { BANK_DETAILS } from "@/config/bank";
 
 class DemoPaymentProvider implements PaymentProvider {
   async initializePayment(input: {
@@ -224,11 +225,9 @@ export function getPaymentProvider(
 }
 
 class BankTransferPaymentProvider implements PaymentProvider {
-  // Bank-transfer details come ONLY from the three required public
-  // environment variables (NEXT_PUBLIC_BANK_*). There are no fallbacks or
-  // placeholder values — a missing variable fails clearly in
-  // initializePayment below. These are receiving-account details shown to
-  // customers, not API secrets.
+  // Receiving-account details come from the single shared config
+  // (src/config/bank.ts) so server and client can never disagree.
+  // These are shown to customers, not API secrets.
   async initializePayment(input: {
     email: string;
     amount: number;
@@ -237,29 +236,13 @@ class BankTransferPaymentProvider implements PaymentProvider {
     customerName?: string;
     phoneNumber?: string;
   }): Promise<PaymentInitializationResult> {
-    const bankName = process.env.NEXT_PUBLIC_BANK_NAME;
-    const accountName = process.env.NEXT_PUBLIC_BANK_ACCOUNT_NAME;
-    const accountNumber = process.env.NEXT_PUBLIC_BANK_ACCOUNT_NUMBER;
-
-    const missing = [
-      "NEXT_PUBLIC_BANK_NAME",
-      "NEXT_PUBLIC_BANK_ACCOUNT_NAME",
-      "NEXT_PUBLIC_BANK_ACCOUNT_NUMBER",
-    ].filter((name) => !process.env[name]);
-
-    if (!bankName || !accountName || !accountNumber) {
-      throw new Error(
-        `Bank transfer is not configured. Missing required environment variable(s): ${missing.join(", ")}.`,
-      );
-    }
-
     return {
       status: "awaiting_transfer",
       reference: input.reference,
       bankDetails: {
-        bankName,
-        accountName,
-        accountNumber,
+        bankName: BANK_DETAILS.bankName,
+        accountName: BANK_DETAILS.accountName,
+        accountNumber: BANK_DETAILS.accountNumber,
         amount: input.amount,
         reference: input.reference,
       },
