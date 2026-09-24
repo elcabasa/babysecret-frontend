@@ -186,14 +186,15 @@ export async function POST(request: Request) {
       "base64",
     );
 
-    // Determine payment method from customer data (default to paystack)
-    const paymentMethod = customer.paymentMethod || "paystack";
+    // Determine payment method from customer data (default to bank_transfer;
+    // paystack/flutterwave remain supported for future re-enablement)
+    const paymentMethod = customer.paymentMethod || "bank_transfer";
     const paymentMethodTitle =
       paymentMethod === "paystack"
         ? "Paystack"
         : paymentMethod === "flutterwave"
         ? "Flutterwave"
-        : "Bank Transfer (Moniepoint)";
+        : "Bank Transfer";
 
     const isBankTransfer = paymentMethod === "bank_transfer";
 

@@ -21,8 +21,8 @@ export function DeliveryMethods() {
       )}
 
       {status === "unavailable" && (
-        <p className="mt-2 text-sm text-red-700">
-          No delivery rate is available for this address.
+        <p className="mt-2 text-sm text-red-700" role="alert">
+          Delivery is currently unavailable for this location.
         </p>
       )}
 
