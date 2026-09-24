@@ -224,10 +224,11 @@ export function getPaymentProvider(
 }
 
 class BankTransferPaymentProvider implements PaymentProvider {
-  private bankName = process.env.MONIEPOINT_BANK_NAME || "Moniepoint Microfinance Bank";
-  private accountName = process.env.MONIEPOINT_ACCOUNT_NAME || "Baby Secret";
-  private accountNumber = process.env.MONIEPOINT_ACCOUNT_NUMBER || "1234567890";
-
+  // Bank-transfer details come ONLY from the three required public
+  // environment variables (NEXT_PUBLIC_BANK_*). There are no fallbacks or
+  // placeholder values — a missing variable fails clearly in
+  // initializePayment below. These are receiving-account details shown to
+  // customers, not API secrets.
   async initializePayment(input: {
     email: string;
     amount: number;
@@ -236,13 +237,29 @@ class BankTransferPaymentProvider implements PaymentProvider {
     customerName?: string;
     phoneNumber?: string;
   }): Promise<PaymentInitializationResult> {
+    const bankName = process.env.NEXT_PUBLIC_BANK_NAME;
+    const accountName = process.env.NEXT_PUBLIC_BANK_ACCOUNT_NAME;
+    const accountNumber = process.env.NEXT_PUBLIC_BANK_ACCOUNT_NUMBER;
+
+    const missing = [
+      "NEXT_PUBLIC_BANK_NAME",
+      "NEXT_PUBLIC_BANK_ACCOUNT_NAME",
+      "NEXT_PUBLIC_BANK_ACCOUNT_NUMBER",
+    ].filter((name) => !process.env[name]);
+
+    if (!bankName || !accountName || !accountNumber) {
+      throw new Error(
+        `Bank transfer is not configured. Missing required environment variable(s): ${missing.join(", ")}.`,
+      );
+    }
+
     return {
       status: "awaiting_transfer",
       reference: input.reference,
       bankDetails: {
-        bankName: this.bankName,
-        accountName: this.accountName,
-        accountNumber: this.accountNumber,
+        bankName,
+        accountName,
+        accountNumber,
         amount: input.amount,
         reference: input.reference,
       },

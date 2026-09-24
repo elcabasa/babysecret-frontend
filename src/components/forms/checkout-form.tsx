@@ -18,6 +18,39 @@ type Location = { state: string; cities: string[] };
 
 type PaymentMethod = "paystack" | "flutterwave" | "bank_transfer";
 
+/*
+ * Payment methods supported by the integration. Paystack and Flutterwave
+ * remain fully implemented (see payment.service.ts + /api/checkout) and
+ * can be re-enabled by adding them to ENABLED_PAYMENT_METHODS.
+ * For now only Bank Transfer is visible to customers.
+ */
+const PAYMENT_METHOD_OPTIONS: {
+  id: PaymentMethod;
+  label: string;
+  hint: string;
+  icon: "card" | "bank";
+}[] = [
+  { id: "paystack", label: "Paystack", hint: "Pay with card or bank", icon: "card" },
+  {
+    id: "flutterwave",
+    label: "Flutterwave",
+    hint: "Pay with card, bank, or USSD",
+    icon: "card",
+  },
+  {
+    id: "bank_transfer",
+    label: "Bank Transfer",
+    hint: "Manual transfer — we'll verify manually",
+    icon: "bank",
+  },
+];
+
+const ENABLED_PAYMENT_METHODS: PaymentMethod[] = ["bank_transfer"];
+
+const VISIBLE_PAYMENT_METHODS = PAYMENT_METHOD_OPTIONS.filter((option) =>
+  ENABLED_PAYMENT_METHODS.includes(option.id),
+);
+
 const schema = z.object({
   firstName: z.string().min(2, "Enter your first name"),
   lastName: z.string().min(2, "Enter your last name"),
@@ -29,10 +62,10 @@ const schema = z.object({
   address: z.string().min(5, "Enter your delivery address"),
   apartment: z.string().optional(),
   notes: z.string().optional(),
-  paymentMethod: z.enum(["paystack", "flutterwave", "bank_transfer"]).default("paystack"),
+  paymentMethod: z.enum(["paystack", "flutterwave", "bank_transfer"]).default("bank_transfer"),
 }).transform((data) => ({
   ...data,
-  paymentMethod: data.paymentMethod || "paystack",
+  paymentMethod: data.paymentMethod || "bank_transfer",
 })) as z.ZodType<{
   firstName: string;
   lastName: string;
@@ -79,7 +112,7 @@ export function CheckoutForm() {
     resolver: zodResolver(schema),
     defaultValues: {
       country: "Nigeria",
-      paymentMethod: "paystack" as PaymentMethod,
+      paymentMethod: "bank_transfer" as PaymentMethod,
     },
   });
 
@@ -170,10 +203,11 @@ export function CheckoutForm() {
 
         setQuotes(result.quotes ?? []);
       } catch (quoteError) {
+        // Never surface provider internals (provider names, API errors) to
+        // customers — show a clear, friendly message instead.
+        console.error("Delivery quote error:", quoteError);
         setError(
-          quoteError instanceof Error
-            ? quoteError.message
-            : "Could not estimate delivery.",
+          "Delivery is currently unavailable for this location. Please check your address or try again.",
         );
       }
     }, 600);
@@ -226,7 +260,7 @@ export function CheckoutForm() {
                 amount: selectedQuote.amount,
               }
             : null,
-          paymentMethod: customer.paymentMethod || "paystack",
+          paymentMethod: customer.paymentMethod || "bank_transfer",
         }),
       });
 
@@ -272,9 +306,10 @@ export function CheckoutForm() {
       }
 
       // Handle based on payment method
-      const paymentMethod = customer.paymentMethod || "paystack";
+      const paymentMethod = customer.paymentMethod || "bank_transfer";
 
-      // Redirect to payment gateway (Paystack/Flutterwave)
+      // Redirect to payment gateway (Paystack/Flutterwave — currently
+      // hidden from the UI but kept for future re-enablement)
       if (paymentMethod !== "bank_transfer" && result.authorizationUrl) {
         window.location.replace(result.authorizationUrl);
         return;
@@ -435,56 +470,50 @@ export function CheckoutForm() {
       <div className="sm:col-span-2">
         <h3 className="text-sm font-semibold">Payment method</h3>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          {(["paystack", "flutterwave", "bank_transfer"] as PaymentMethod[]).map(
-            (method) => (
-              <label
-                key={method}
-                className={`flex cursor-pointer items-center justify-between gap-4 rounded-xl border px-4 py-3 text-sm ${
-                  watched.paymentMethod === method
-                    ? "border-[#005dbd] bg-[#e7effc]"
-                    : "border-[#e5e3e3] bg-white"
-                }`}
-              >
-                <span className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    checked={watched.paymentMethod === method}
-                    onChange={() => setValue("paymentMethod", method, { shouldValidate: true })}
-                    className="text-[#005dbd] focus-visible:ring-2 focus-visible:ring-[#005dbd]"
-                  />
-                  <span className="flex flex-col">
-                    <span className="block font-semibold">
-                      {method === "paystack" && (
-                        <>
-                          <CreditCard className="inline-block size-4 mr-1" />
-                          Paystack
-                        </>
-                      )}
-                      {method === "flutterwave" && (
-                        <>
-                          <CreditCard className="inline-block size-4 mr-1" />
-                          Flutterwave
-                        </>
-                      )}
-                      {method === "bank_transfer" && (
-                        <>
-                          <Building2 className="inline-block size-4 mr-1" />
-                          Bank Transfer (Moniepoint)
-                        </>
-                      )}
-                    </span>
-                    <span className="block text-[11px] text-[#334f6d]">
-                      {method === "paystack" && "Pay with card or bank"}
-                      {method === "flutterwave" && "Pay with card, bank, or USSD"}
-                      {method === "bank_transfer" && "Manual transfer - we'll verify manually"}
-                    </span>
+          {VISIBLE_PAYMENT_METHODS.map((option) => (
+            <label
+              key={option.id}
+              className={`flex cursor-pointer items-center justify-between gap-4 rounded-xl border px-4 py-3 text-sm ${
+                watched.paymentMethod === option.id
+                  ? "border-[#005dbd] bg-[#e7effc]"
+                  : "border-[#e5e3e3] bg-white"
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  checked={watched.paymentMethod === option.id}
+                  onChange={() => setValue("paymentMethod", option.id, { shouldValidate: true })}
+                  className="text-[#005dbd] focus-visible:ring-2 focus-visible:ring-[#005dbd]"
+                />
+                <span className="flex flex-col">
+                  <span className="block font-semibold">
+                    {option.icon === "bank" ? (
+                      <>
+                        <Building2 className="inline-block size-4 mr-1" />
+                        {option.label}
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="inline-block size-4 mr-1" />
+                        {option.label}
+                      </>
+                    )}
+                  </span>
+                  <span className="block text-[11px] text-[#334f6d]">
+                    {option.hint}
                   </span>
                 </span>
-              </label>
-            ),
-          )}
+              </span>
+            </label>
+          ))}
         </div>
+        <p className="mt-3 rounded-xl bg-[#e7effc] px-4 py-3 text-xs leading-relaxed text-[#334f6d]">
+          Pay by bank transfer. You&apos;ll receive our account details after
+          placing your order, and we&apos;ll process it once your transfer is
+          verified.
+        </p>
       </div>
 
       <label className="grid gap-2 text-sm sm:col-span-2" htmlFor="notes">
