@@ -1,21 +1,15 @@
 /**
- * Public bank-transfer details shown to customers at checkout.
+ * Bank-transfer receiving account shown to customers at checkout.
  *
- * The application uses ONLY these three environment variables — there are
- * no fallback or default values anywhere. A receiving account must be
- * visible to the customer to complete a transfer, so these are read from
- * `NEXT_PUBLIC_*` variables (exposed to the browser by design):
+ * This is the single source of truth for the account details — both the
+ * client UI (awaiting-payment page) and the server payment service read
+ * from here, so the account can never drift out of sync.
  *
- *   NEXT_PUBLIC_BANK_NAME
- *   NEXT_PUBLIC_BANK_ACCOUNT_NAME
- *   NEXT_PUBLIC_BANK_ACCOUNT_NUMBER
- *
- * If any required variable is missing, `getBankDetails()` throws a clear
- * error instead of silently substituting another value.
- *
- * NEVER put API secrets here. `PAYSTACK_SECRET_KEY`,
- * `FLUTTERWAVE_SECRET_KEY`, WooCommerce keys, etc. stay server-only
- * (no `NEXT_PUBLIC_` prefix) and are only read in API routes / services.
+ * Note: a receiving account is public by nature (customers must see it to
+ * pay you), so keeping it in code is not a secret leak. Payment/API
+ * secrets (`PAYSTACK_SECRET_KEY`, `FLUTTERWAVE_SECRET_KEY`, WooCommerce
+ * keys, etc.) must still stay server-only in environment variables and
+ * never appear here.
  */
 
 export interface BankDetails {
@@ -24,35 +18,15 @@ export interface BankDetails {
   accountNumber: string;
 }
 
-const REQUIRED_BANK_ENV_VARS = [
-  "NEXT_PUBLIC_BANK_NAME",
-  "NEXT_PUBLIC_BANK_ACCOUNT_NAME",
-  "NEXT_PUBLIC_BANK_ACCOUNT_NUMBER",
-] as const;
+export const BANK_DETAILS: BankDetails = {
+  bankName: "MoniePoint",
+  accountName: "Flawless Cosmetics Limited",
+  accountNumber: "8262328039",
+};
 
 /**
- * Reads the configured bank-transfer details directly from the environment.
- * Throws a descriptive error listing every missing variable — never falls
- * back to placeholder values.
+ * Returns the configured bank-transfer details.
  */
 export function getBankDetails(): BankDetails {
-  const bankName = process.env.NEXT_PUBLIC_BANK_NAME;
-  const accountName = process.env.NEXT_PUBLIC_BANK_ACCOUNT_NAME;
-  const accountNumber = process.env.NEXT_PUBLIC_BANK_ACCOUNT_NUMBER;
-
-  const missing = REQUIRED_BANK_ENV_VARS.filter(
-    (name) => !process.env[name],
-  );
-
-  if (missing.length > 0) {
-    throw new Error(
-      `Bank transfer is not configured. Missing required environment variable(s): ${missing.join(", ")}.`,
-    );
-  }
-
-  return {
-    bankName: bankName as string,
-    accountName: accountName as string,
-    accountNumber: accountNumber as string,
-  };
+  return BANK_DETAILS;
 }
