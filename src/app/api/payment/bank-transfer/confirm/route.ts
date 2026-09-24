@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+const confirmSchema = z.object({
+  reference: z.string().min(1, "Payment reference is required."),
+  payerName: z.string().trim().min(2, "Transfer/payer name is required."),
+  transferReference: z.string().trim().min(3, "Transfer reference is required."),
+});
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { reference } = body;
+    const parsed = confirmSchema.safeParse(body);
 
-    if (!reference) {
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
       return NextResponse.json(
-        { message: "Payment reference is required." },
+        { message: firstIssue?.message ?? "Invalid confirmation details." },
         { status: 400 },
       );
     }
+
+    const { reference, payerName, transferReference } = parsed.data;
 
     // Get WooCommerce credentials
     const wooUrl = process.env.WOOCOMMERCE_REST_URL;
@@ -69,7 +79,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update order meta to mark as awaiting bank transfer verification
+    /*
+     * Record the customer's transfer claim and keep the order pending.
+     * Status "on-hold" means awaiting payment verification — the order is
+     * deliberately NOT marked as paid here. An admin verifies the transfer
+     * (payer name + transfer reference below) before processing.
+     */
     const updateResponse = await fetch(`${wooUrl}/orders/${order.id}`, {
       method: "PUT",
       headers: {
@@ -77,10 +92,19 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        status: "on-hold", // on-hold means awaiting payment
+        status: "on-hold",
+        set_paid: false,
         meta_data: [
           { key: "_babysecret_bank_transfer_awaiting", value: "true" },
-          { key: "_babysecret_bank_transfer_confirmed_at", value: new Date().toISOString() },
+          {
+            key: "_babysecret_bank_transfer_confirmed_at",
+            value: new Date().toISOString(),
+          },
+          { key: "_babysecret_bank_payer_name", value: payerName },
+          {
+            key: "_babysecret_bank_transfer_reference",
+            value: transferReference,
+          },
         ],
       }),
     });

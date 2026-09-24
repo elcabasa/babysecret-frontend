@@ -4,6 +4,7 @@ import type {
   PaymentProvider,
   PaymentVerificationResult,
 } from "@/services/payment/payment.types";
+import { BANK_DETAILS } from "@/config/bank";
 
 class DemoPaymentProvider implements PaymentProvider {
   async initializePayment(input: {
@@ -224,10 +225,9 @@ export function getPaymentProvider(
 }
 
 class BankTransferPaymentProvider implements PaymentProvider {
-  private bankName = process.env.MONIEPOINT_BANK_NAME || "Moniepoint Microfinance Bank";
-  private accountName = process.env.MONIEPOINT_ACCOUNT_NAME || "Baby Secret";
-  private accountNumber = process.env.MONIEPOINT_ACCOUNT_NUMBER || "1234567890";
-
+  // Receiving-account details come from the single shared config
+  // (src/config/bank.ts) so server and client can never disagree.
+  // These are shown to customers, not API secrets.
   async initializePayment(input: {
     email: string;
     amount: number;
@@ -240,9 +240,9 @@ class BankTransferPaymentProvider implements PaymentProvider {
       status: "awaiting_transfer",
       reference: input.reference,
       bankDetails: {
-        bankName: this.bankName,
-        accountName: this.accountName,
-        accountNumber: this.accountNumber,
+        bankName: BANK_DETAILS.bankName,
+        accountName: BANK_DETAILS.accountName,
+        accountNumber: BANK_DETAILS.accountNumber,
         amount: input.amount,
         reference: input.reference,
       },
