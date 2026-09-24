@@ -4,22 +4,25 @@ Delivery quotes are produced by a small provider layer in `src/services/shipping
 
 Key modules:
 
-- `shipping.service.ts` — provider switch + `getDeliveryQuotes` / `arrangeShipment`
-- `tship.service.ts` — Terminal Africa TShip provider
+- `shipping.service.ts` — enabled-provider list + `getDeliveryQuotes` / `arrangeShipment`
+- `tship.service.ts` — Terminal Africa TShip provider (currently the only active provider)
+- `shipbubble.service.ts` — Shipbubble provider (fully implemented, currently disabled — no API calls made)
 - `woocommerce.service.ts` — WooCommerce shipping-zone provider (rates via the Store API cart)
 - `src/app/api/shipping/quotes/route.ts` — quote endpoint used by the checkout form
 
 ## Provider selection
 
-`SHIPPING_PROVIDER` decides the active provider:
+`ENABLED_SHIPPING_PROVIDERS` in `shipping.service.ts` is the single switch for customer-facing providers — currently `["tship"]` (Terminal Africa only). `SHIPPING_PROVIDER` is honored only if it names an enabled provider; anything else falls back to `tship`.
 
 | Value | Behaviour |
 | --- | --- |
 | `tship` | Live Terminal Africa (TShip) rates |
-| `woocommerce` | Rates from the store's WooCommerce shipping zones |
-| *(unset)* | `mock` demo rates (Ikeja/Lagos zones) |
+| `shipbubble` | Live Shipbubble rates — only once re-added to `ENABLED_SHIPPING_PROVIDERS` (account pending live-mode approval); otherwise ignored |
+| `woocommerce` | Rates from the store's WooCommerce shipping zones — only once enabled in `ENABLED_SHIPPING_PROVIDERS`; otherwise ignored |
 
-On a provider error, `SHIPPING_FALLBACK=mock` can be set to fall back to demo rates so checkout never hard-blocks.
+To re-enable Shipbubble later, add `"shipbubble"` to `ENABLED_SHIPPING_PROVIDERS`. No other code changes needed — the implementation, `sb:` rate-id routing in `arrangeShipment`, and order-meta handling are intact.
+
+Quotes come ONLY from the active provider: there is no automatic fallback between providers. Provider errors and empty results surface to the shopper as the friendly message **"Delivery is currently unavailable for this location."** — never raw provider errors, and the delivery selector is only rendered when quotes exist (no broken/empty selector).
 
 ## Environment
 
@@ -29,7 +32,7 @@ On a provider error, `SHIPPING_FALLBACK=mock` can be set to fall back to demo ra
 | `TERMINAL_API_BASE` | TShip base URL (production default `https://api.terminal.africa/v1`; use `https://sandbox.terminal.africa/v1` to test) |
 | `SHIPPING_PICKUP_*` | Store pickup origin for quotes (first/last name, email, phone, address, city, state, country, zip) |
 | `SHIPPING_ITEM_WEIGHT_KG` | Per-unit parcel weight (kg); default `0.4` |
-| `SHIPPING_FALLBACK` | `mock` to fall back on provider errors |
+| `SHIPPUBBLE_API_KEY` / `SHIPPUBBLE_API_BASE` | Shipbubble credentials (kept for re-enablement; currently unused) |
 
 The pickup origin details apply to the TShip provider. `SHIPPING_PICKUP_EMAIL` and `SHIPPING_PICKUP_PHONE` must be non-empty for TShip.
 
