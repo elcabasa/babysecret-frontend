@@ -99,7 +99,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return true;
       }
 
-      console.log("[auth] Google callback started");
+      // Server-side kill switch: the UI hides the button when the flag is
+      // off, and this rejects direct provider invocations all the same.
+      if (process.env.NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED !== "true") {
+        console.error("[auth] Google sign-in rejected: provider disabled");
+        return false;
+      }
 
       const googleProfile = profile as {
         email?: string;
@@ -112,37 +117,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         .toLowerCase()
         .trim();
 
-      console.log(`[auth] Google email: ${email || "(empty)"}`);
-
       if (!email) {
         console.error("[auth] Google sign-in failed: no email returned");
         return false;
       }
 
-      // Identity must come from Google's verified email claim, not a
-      // client-supplied address.
-      if (googleProfile.email_verified === false) {
+      // Identity must come from an affirmative verified-email claim. An
+      // absent claim (`undefined`) is NOT sufficient — otherwise an
+      // unverified Google address could take over a password account with
+      // the same email.
+      if (googleProfile.email_verified !== true) {
         console.error("[auth] Google sign-in failed: email is not verified");
         return false;
       }
 
       try {
-        console.log("[auth] WooCommerce customer lookup started");
         const existing = await getCustomerByEmail(email);
 
         // ------------------------------------------------------------
         // EXISTING CUSTOMER
         // ------------------------------------------------------------
         if (existing) {
-          console.log(
-            `[auth] WooCommerce customer found: ${existing.id}`,
-          );
-
           // Mark the email as verified because Google has verified it.
           // Do not fail the sign-in if this metadata write fails — the
           // Google identity is already proven and the password is untouched.
+          // The stored auth_provider and password are NEVER overwritten here:
+          // linking only proves the same human owns both login methods.
           try {
-            console.log("[auth] WooCommerce customer update started");
             await updateWooCustomer(existing.id, {
               meta_data: [
                 {
@@ -151,7 +152,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 },
               ],
             });
-            console.log("[auth] WooCommerce customer update succeeded");
           } catch (error) {
             console.error(
               "[auth] WooCommerce customer update failed; continuing sign-in:",
@@ -174,12 +174,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           record.role =
             existing.role === "administrator" ? "admin" : "customer";
 
-          console.log("[auth] Google sign-in callback succeeded");
-
           return true;
         }
-
-        console.log("[auth] WooCommerce customer found: none");
 
         // ------------------------------------------------------------
         // NEW CUSTOMER
@@ -209,11 +205,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         record.emailVerified = true;
         record.authProvider = "google";
         record.role = created.role;
-
-        console.log(
-          `[auth] Google sign-in successful: created customer ${created.id}`,
-        );
-        console.log("[auth] Google sign-in callback succeeded");
 
         return true;
       } catch (error) {

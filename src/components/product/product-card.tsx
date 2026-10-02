@@ -51,7 +51,7 @@ export function ProductCard({ product }: { product: Product }) {
             {formatPrice(product.price)}
           </span>
           {product.regularPrice && product.regularPrice > product.price && (
-            <span className="ml-2 text-xs text-[#9aaeba] line-through">
+            <span className="ml-2 text-xs text-[#5a6b7e] line-through">
               {formatPrice(product.regularPrice)}
             </span>
           )}

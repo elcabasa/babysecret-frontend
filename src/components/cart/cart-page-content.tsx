@@ -30,7 +30,7 @@ export function CartPageContent() {
         </p>
         <Link
           href="/shop"
-          className="mt-6 inline-block rounded-full bg-[#005dbd] px-7 py-3 font-semibold text-white"
+          className="mt-6 inline-block rounded-full bg-[#005dbd] px-7 py-3 font-semibold text-white transition hover:bg-[#004a97] focus-visible:ring-2 focus-visible:ring-[#005dbd] focus-visible:ring-offset-2"
         >
           Continue Shopping
         </Link>
@@ -40,7 +40,7 @@ export function CartPageContent() {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
-      <div className="glass-panel rounded-2xl px-6">
+      <div className="glass-panel min-w-0 rounded-2xl px-6">
         <div className="flex items-center justify-between border-b border-[#e5e3e3] py-5">
           <h2 className="font-semibold">Your items</h2>
           <div className="flex items-center gap-4">
@@ -54,7 +54,7 @@ export function CartPageContent() {
                   clearCart();
                 }
               }}
-              className="text-sm font-medium text-[#c0392b] hover:underline"
+              className="rounded-full px-2 py-1 text-sm font-medium text-[#c0392b] transition hover:bg-[#fbecec] hover:underline focus-visible:ring-2 focus-visible:ring-[#005dbd] focus-visible:ring-offset-1"
             >
               Clear cart
             </button>

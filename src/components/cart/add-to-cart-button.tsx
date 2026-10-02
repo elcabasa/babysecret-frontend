@@ -14,20 +14,28 @@ export function AddToCartButton({
 }) {
   const addItem = useCartStore((state) => state.addItem);
   const [added, setAdded] = useState(false);
+  const [addError, setAddError] = useState("");
   const unavailable =
     product.stockStatus === "out-of-stock" || product.purchasable === false;
   const handleAdd = () => {
     if (unavailable) return;
-    addItem({
-      productId: product.id,
-      slug: product.slug ?? product.id,
-      name: product.name,
-      image: product.image,
-      price: product.price,
-      stockStatus: product.stockStatus,
-    });
-    setAdded(true);
-    window.setTimeout(() => setAdded(false), 1600);
+    try {
+      addItem({
+        productId: product.id,
+        slug: product.slug ?? product.id,
+        name: product.name,
+        image: product.image,
+        price: product.price,
+        stockStatus: product.stockStatus,
+      });
+      setAddError("");
+      setAdded(true);
+      window.setTimeout(() => setAdded(false), 1600);
+    } catch {
+      // addItem is synchronous and cannot partially apply, so the cart is
+      // untouched here — surface the failure instead of staying silent.
+      setAddError("Could not add this item. Please try again.");
+    }
   };
   if (unavailable && compact) {
     return (
@@ -47,6 +55,7 @@ export function AddToCartButton({
   }
 
   return (
+    <>
     <button
       type="button"
       onClick={handleAdd}
@@ -54,12 +63,14 @@ export function AddToCartButton({
       aria-label={
         unavailable
           ? `${product.name} is unavailable`
-          : `Add ${product.name} to cart`
+          : added
+            ? `Added ${product.name} to cart`
+            : `Add ${product.name} to cart`
       }
       className={
         compact
-          ? "grid size-10 place-items-center rounded-full bg-[#3051a0] text-white transition hover:bg-[#005dbd] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005dbd]"
-          : "inline-flex items-center gap-2 rounded-full bg-[#005dbd] px-8 py-4 font-semibold text-white transition hover:bg-[#004d9c] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005dbd]"
+          ? "grid size-10 place-items-center rounded-full bg-[#3051a0] text-white transition hover:bg-[#005dbd] disabled:cursor-not-allowed disabled:bg-[#dbe7f3] disabled:text-[#334f6d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005dbd]"
+          : "inline-flex items-center gap-2 rounded-full bg-[#005dbd] px-8 py-4 font-semibold text-white transition hover:bg-[#004d9c] disabled:cursor-not-allowed disabled:bg-[#dbe7f3] disabled:text-[#334f6d] disabled:hover:bg-[#dbe7f3] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005dbd]"
       }
     >
       {unavailable ? (
@@ -70,6 +81,17 @@ export function AddToCartButton({
         <ShoppingCart size={compact ? 18 : 20} />
       )}
       {!compact && !unavailable && (added ? "Added to cart" : "Add to cart")}
+      {added && (
+        <span className="sr-only" role="status">
+          Added to cart
+        </span>
+      )}
     </button>
+    {addError && (
+      <span className="text-xs text-red-700" role="alert">
+        {addError}
+      </span>
+    )}
+    </>
   );
 }

@@ -9,6 +9,8 @@ type FormSelectFieldProps<T extends FieldValues> = {
   onChange: (value: string) => void;
   placeholder?: string;
   wide?: boolean;
+  hint?: string;
+  disabled?: boolean;
   error?: FieldError | undefined;
 };
 
@@ -20,6 +22,8 @@ export function FormSelectField<T extends FieldValues>({
   onChange,
   placeholder = `Select ${label.toLowerCase()}`,
   wide = false,
+  hint,
+  disabled = false,
   error,
 }: FormSelectFieldProps<T>) {
   return (
@@ -34,7 +38,8 @@ export function FormSelectField<T extends FieldValues>({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={Boolean(error)}
-        className="glass-control rounded-xl px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[#3051a0]"
+        disabled={disabled}
+        className="glass-control rounded-xl px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[#3051a0] disabled:cursor-not-allowed disabled:bg-[#f4f8fc] disabled:text-[#334f6d]"
       >
         <option value="">{placeholder}</option>
 
@@ -44,6 +49,10 @@ export function FormSelectField<T extends FieldValues>({
           </option>
         ))}
       </select>
+
+      {hint && (
+        <span className="text-xs text-[#334f6d]">{hint}</span>
+      )}
 
       {error && (
         <span className="text-xs text-red-700" role="alert">

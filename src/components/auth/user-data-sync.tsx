@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useCartStore } from "@/store/cart.store";
+import { mergeCartItems } from "@/store/cart.store";
 import { useWishlistStore } from "@/store/wishlist.store";
 import type { CartItem } from "@/types/cart";
 
@@ -35,7 +36,13 @@ export function UserDataSync() {
         fetch("/api/account/cart")
           .then((r) => (r.ok ? r.json() : null))
           .then((data) => {
-            setCartItems(Array.isArray(data?.items) ? data.items : []);
+            // Merge, don't replace: the request may have started before the
+            // customer clicked Add to Cart, and a blind setItems would wipe
+            // that fresh line (first click "does nothing").
+            const serverItems = Array.isArray(data?.items) ? data.items : [];
+            setCartItems(
+              mergeCartItems(useCartStore.getState().items, serverItems),
+            );
           })
           .catch(() => {})
           .finally(() => {
@@ -88,11 +95,12 @@ export function UserDataSync() {
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
           const verified = data?.items as CartItem[] | undefined;
-          if (
-            Array.isArray(verified) &&
-            !sameCart(verified, useCartStore.getState().items)
-          ) {
-            setCartItems(verified);
+          const current = useCartStore.getState().items;
+          // Same race as the initial load: the customer may have added an
+          // item while this save was in flight. Merge the server echo into
+          // the live cart instead of overwriting it.
+          if (Array.isArray(verified) && !sameCart(verified, current)) {
+            setCartItems(mergeCartItems(current, verified));
           }
         })
         .catch(() => {});

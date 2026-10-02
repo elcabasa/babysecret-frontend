@@ -12,16 +12,20 @@ import {
 } from "lucide-react";
 import { formatPrice } from "@/data/products";
 import { useCartStore } from "@/store/cart.store";
-import { getBankDetails } from "@/config/bank";
+import { getPublicBankDetails } from "@/config/bank-public";
 
 type Step = "details" | "form" | "submitted";
 
 type SearchParams = {
   reference?: string;
-  amount?: string;
-  bankName?: string;
-  accountName?: string;
-  accountNumber?: string;
+};
+
+type BankTransferDetails = {
+  amount: number;
+  currency: string;
+  orderStatus: string;
+  paid: boolean;
+  bankDetails: { bankName: string; accountName: string; accountNumber: string };
 };
 
 function CopyButton({
@@ -66,11 +70,15 @@ export default function AwaitingPaymentPage({
   const [submitError, setSubmitError] = useState("");
   const [payerName, setPayerName] = useState("");
   const [transferReference, setTransferReference] = useState("");
+  const [orderEmail, setOrderEmail] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{
     payerName?: string;
     transferReference?: string;
+    orderEmail?: string;
   }>({});
   const [params, setParams] = useState<SearchParams | null>(null);
+  const [details, setDetails] = useState<BankTransferDetails | null>(null);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
 
   const items = useCartStore((state) => state.items);
   const subtotal = items.reduce(
@@ -81,6 +89,53 @@ export default function AwaitingPaymentPage({
   useEffect(() => {
     searchParams.then(setParams);
   }, [searchParams]);
+
+  /*
+   * The amount and the receiving account are fetched from the server for this
+   * reference. They are deliberately NOT read from the URL: query strings are
+   * client-controlled, so a crafted link could otherwise make the storefront
+   * display a different account number or a different total.
+   */
+  const reference = params?.reference;
+
+  useEffect(() => {
+    if (!reference) return;
+
+    let cancelled = false;
+
+    async function load() {
+      if (!reference) return;
+
+      try {
+        const response = await fetch(
+          `/api/payment/bank-transfer/details?reference=${encodeURIComponent(reference)}`,
+          { cache: "no-store" },
+        );
+        const result = await response.json().catch(() => null);
+
+        if (cancelled) return;
+
+        if (!response.ok) {
+          setDetailsError(
+            result?.message ?? "Could not load your transfer instructions.",
+          );
+          return;
+        }
+
+        setDetails(result as BankTransferDetails);
+      } catch {
+        if (!cancelled) {
+          setDetailsError("Could not load your transfer instructions.");
+        }
+      }
+    }
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reference]);
 
   useEffect(() => {
     if (!copiedField) return;
@@ -121,12 +176,24 @@ export default function AwaitingPaymentPage({
       return;
     }
 
-    const errors: { payerName?: string; transferReference?: string } = {};
+    const errors: {
+      payerName?: string;
+      transferReference?: string;
+      orderEmail?: string;
+    } = {};
     if (payerName.trim().length < 2) {
       errors.payerName = "Enter the name used for the transfer.";
     }
     if (transferReference.trim().length < 3) {
       errors.transferReference = "Enter your transfer reference.";
+    }
+    // Guest ownership proof: signed-in owners don't need it, but guests
+    // must supply the order email so a bare reference is not enough.
+    if (
+      orderEmail.trim().length > 0 &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(orderEmail.trim())
+    ) {
+      errors.orderEmail = "Enter a valid email address.";
     }
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
@@ -144,6 +211,9 @@ export default function AwaitingPaymentPage({
           reference,
           payerName: payerName.trim(),
           transferReference: transferReference.trim(),
+          ...(orderEmail.trim()
+            ? { email: orderEmail.trim().toLowerCase() }
+            : {}),
         }),
       });
 
@@ -165,27 +235,28 @@ export default function AwaitingPaymentPage({
     }
   }
 
-  // Server-provided details (via checkout) take precedence over environment
-  // configuration. There are no hardcoded fallbacks: if neither source has
-  // the details, fail clearly instead of showing placeholder values.
-  let configError: string | null = null;
-  let configured = { bankName: "", accountName: "", accountNumber: "" };
-  try {
-    configured = getBankDetails();
-  } catch (error) {
-    configError =
-      error instanceof Error
-        ? error.message
-        : "Bank transfer is not configured.";
-  }
-
-  const bankName = params.bankName || configured.bankName;
-  const accountName = params.accountName || configured.accountName;
-  const accountNumber = params.accountNumber || configured.accountNumber;
-  const bankDetailsAvailable = Boolean(bankName && accountName && accountNumber);
-  const reference = params.reference || "";
-  const parsedAmount = params.amount ? Number(params.amount) : NaN;
-  const amount = Number.isFinite(parsedAmount) ? parsedAmount : subtotal;
+  /*
+   * Bank details: the server response is authoritative. The NEXT_PUBLIC_*
+   * variables are only a display fallback for when the lookup endpoint cannot be
+   * reached (e.g. a transient network failure) — both are env-driven, and
+   * neither is hardcoded, so no placeholder account number can ever be shown.
+   * The amount, by contrast, comes only from the server; a client-side subtotal
+   * is never presented as the amount to transfer.
+   */
+  const fallbackBank = getPublicBankDetails();
+  const bankName = details?.bankDetails.bankName || fallbackBank.bankName;
+  const accountName = details?.bankDetails.accountName || fallbackBank.accountName;
+  const accountNumber =
+    details?.bankDetails.accountNumber || fallbackBank.accountNumber;
+  // If the server lookup failed we must not show transfer instructions at all,
+  // even if the NEXT_PUBLIC_ fallback happens to be populated: a partial view
+  // (real account, unverified amount) is exactly the state we don't want a
+  // customer paying into.
+  const bankDetailsAvailable =
+    !detailsError && Boolean(bankName && accountName && accountNumber);
+  const amount = details?.amount ?? subtotal;
+  const amountIsAuthoritative = details !== null;
+  const configError = detailsError;
   const hasItemBreakdown = items.length > 0;
 
   return (
@@ -220,10 +291,23 @@ export default function AwaitingPaymentPage({
               Amount to transfer
             </p>
             <p className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-              {formatPrice(amount)}
+              {amountIsAuthoritative ? (
+                formatPrice(amount)
+              ) : detailsError ? (
+                "—"
+              ) : (
+                <span className="inline-flex items-center gap-2 text-lg">
+                  <Loader2 size={20} className="animate-spin" />
+                  Loading…
+                </span>
+              )}
             </p>
             <p className="mt-2 text-xs text-white/80">
-              Transfer exactly this amount so we can match your payment.
+              {amountIsAuthoritative
+                ? "Transfer exactly this amount so we can match your payment."
+                : detailsError
+                  ? "We could not confirm your order total. Please contact support before transferring."
+                  : "Fetching your order total…"}
             </p>
           </section>
 
@@ -390,7 +474,7 @@ export default function AwaitingPaymentPage({
                 >
                   I Have Made The Transfer
                 </button>
-                <p className="mt-3 text-center text-xs text-[#737784]">
+                <p className="mt-3 text-center text-xs text-[#5b606c]">
                   Your order stays pending until we verify your transfer. We
                   will process it after verification, usually within 1-2
                   business hours.
@@ -459,9 +543,39 @@ export default function AwaitingPaymentPage({
                           {fieldErrors.transferReference}
                         </span>
                       )}
-                      <span className="text-xs text-[#737784]">
+                      <span className="text-xs text-[#5b606c]">
                         Use the sender name and narration exactly as they
                         appear on your transfer receipt.
+                      </span>
+                    </label>
+
+                    <label
+                      className="grid gap-2 text-sm"
+                      htmlFor="orderEmail"
+                    >
+                      <span className="font-semibold text-[#142F54]">
+                        Order email (guests only)
+                      </span>
+                      <input
+                        id="orderEmail"
+                        type="email"
+                        value={orderEmail}
+                        onChange={(event) =>
+                          setOrderEmail(event.target.value)
+                        }
+                        placeholder="Email used at checkout"
+                        autoComplete="email"
+                        className="glass-control rounded-xl px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[#3051a0]"
+                      />
+                      {fieldErrors.orderEmail && (
+                        <span className="text-xs text-red-700" role="alert">
+                          {fieldErrors.orderEmail}
+                        </span>
+                      )}
+                      <span className="text-xs text-[#5b606c]">
+                        Signed in? Leave this blank. Checked out as a guest?
+                        Enter the email from your order so we can verify
+                        it&apos;s yours.
                       </span>
                     </label>
                   </div>
@@ -480,14 +594,14 @@ export default function AwaitingPaymentPage({
                       type="button"
                       onClick={() => setStep("details")}
                       disabled={submitting}
-                      className="rounded-full border border-[#e5e3e3] bg-white px-6 py-3 font-semibold text-[#142F54] transition hover:bg-[#F4F8FC] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-full border border-[#64748b] bg-white px-6 py-3 font-semibold text-[#142F54] transition hover:bg-[#F4F8FC] focus-visible:ring-2 focus-visible:ring-[#005dbd] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:border-[#9db9d6] disabled:bg-[#f4f8fc] disabled:text-[#5a6b7e]"
                     >
                       Back
                     </button>
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="flex-1 rounded-full bg-[#0055B8] px-6 py-3 font-semibold text-white transition hover:bg-[#004a9f] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex-1 rounded-full bg-[#0055B8] px-6 py-3 font-semibold text-white transition hover:bg-[#004a9f] focus-visible:ring-2 focus-visible:ring-[#005dbd] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#dbe7f3] disabled:text-[#334f6d] disabled:hover:bg-[#dbe7f3]"
                     >
                       {submitting ? (
                         <>
@@ -502,7 +616,7 @@ export default function AwaitingPaymentPage({
                       )}
                     </button>
                   </div>
-                  <p className="mt-3 text-center text-xs text-[#737784]">
+                  <p className="mt-3 text-center text-xs text-[#5b606c]">
                     Submitting does not mark your order as paid — it queues it
                     for manual verification.
                   </p>
@@ -524,12 +638,12 @@ export default function AwaitingPaymentPage({
                   shortly — your order will only be processed after the bank
                   transfer is verified.
                 </p>
-                <p className="mt-2 text-center text-xs text-[#737784]">
+                <p className="mt-2 text-center text-xs text-[#5b606c]">
                   You will receive an email once your payment is verified.
                 </p>
                 <Link
                   href="/shop"
-                  className="mt-6 inline-block w-full rounded-full bg-[#0055B8] px-7 py-3 text-center font-semibold text-white"
+                  className="mt-6 inline-block w-full rounded-full bg-[#0055B8] px-7 py-3 text-center font-semibold text-white transition hover:bg-[#004a9f] focus-visible:ring-2 focus-visible:ring-[#005dbd] focus-visible:ring-offset-2"
                 >
                   Continue Shopping
                 </Link>

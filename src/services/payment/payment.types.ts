@@ -25,6 +25,15 @@ export interface PaymentInitializationResult {
 export interface PaymentVerificationResult {
   verified: boolean;
   reference: string;
+  /**
+   * Authoritative amount/currency as reported by the provider's verify API
+   * (Paystack kobo → NGN, Flutterwave amount/currency). Absent when the
+   * provider could not be verified. Callers must compare `amount` against
+   * the WooCommerce order total themselves — verification alone never
+   * implies the customer paid enough.
+   */
+  amount?: number;
+  currency?: string;
 }
 
 export interface PaymentProvider {

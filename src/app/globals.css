@@ -38,13 +38,31 @@ body {
 }
 
 .glass-control {
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid #64748b;
+  background: rgba(255, 255, 255, 0.9);
   box-shadow:
     0 8px 22px rgba(48, 81, 160, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(20px) saturate(135%);
   -webkit-backdrop-filter: blur(20px) saturate(135%);
+}
+
+/*
+ * Contrast + keyboard-focus baseline (WCAG AA).
+ *
+ * The glass form controls sit on near-white surfaces, so placeholders use a
+ * verified 5.5:1 slate instead of the browser's faint default gray. The
+ * :focus-visible outline guarantees every interactive element — including
+ * buttons without their own ring classes — shows a 3:1+ focus indicator.
+ */
+.glass-control::placeholder {
+  color: #5a6b7e;
+  opacity: 1;
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid #005dbd;
+  outline-offset: 2px;
 }
 
 .glass-dark {

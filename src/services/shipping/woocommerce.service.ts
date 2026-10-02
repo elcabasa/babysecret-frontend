@@ -68,7 +68,7 @@ function toStoreAddress(address: DeliveryQuoteInput["delivery"]): StoreAddress {
     address_1: address.line1,
     city: address.city,
     state: address.state,
-    postcode: address.zip || "000000",
+    postcode: address.zip ?? "",
     country: countryToCode(address.country),
     email: address.email,
     phone: address.phone,

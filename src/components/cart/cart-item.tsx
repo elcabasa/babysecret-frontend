@@ -29,14 +29,14 @@ export function CartItem({ item }: { item: CartItemType }) {
 
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h2
-              className={`truncate ${outOfStock ? "font-medium text-[#8494a8]" : "font-medium"}`}
+              className={`truncate ${outOfStock ? "font-medium text-[#5a6b7e]" : "font-medium"}`}
             >
               {item.name}
             </h2>
             <p
-              className={`mt-1 text-sm ${outOfStock ? "text-[#8494a8]" : "text-[#334f6d]"}`}
+              className={`mt-1 text-sm ${outOfStock ? "text-[#5a6b7e]" : "text-[#334f6d]"}`}
             >
               {formatPrice(item.price)}
             </p>
@@ -44,7 +44,7 @@ export function CartItem({ item }: { item: CartItemType }) {
           <button
             type="button"
             onClick={() => removeItem(item.productId, item.variantId)}
-            className="text-[#7c7979] hover:text-red-600"
+            className="rounded-full p-1 text-[#5f5b5b] transition hover:bg-[#fbecec] hover:text-red-700 focus-visible:ring-2 focus-visible:ring-[#005dbd] focus-visible:ring-offset-1"
             aria-label={`Remove ${item.name}`}
           >
             <Trash2 size={17} />
@@ -57,24 +57,24 @@ export function CartItem({ item }: { item: CartItemType }) {
               Not available for delivery
             </p>
           ) : (
-            <div className="flex items-center rounded-full border border-[#e5e3e3]">
+            <div className="flex items-center rounded-full border border-[#64748b] bg-white">
               <button
                 type="button"
                 onClick={() =>
                   decrementQuantity(item.productId, item.variantId)
                 }
-                className="grid size-8 place-items-center"
+                className="grid size-8 place-items-center rounded-full transition hover:bg-[#e7effc] focus-visible:ring-2 focus-visible:ring-[#005dbd] disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label={`Decrease ${item.name} quantity`}
               >
                 <Minus size={14} />
               </button>
-              <span className="w-8 text-center text-sm">{item.quantity}</span>
+              <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
               <button
                 type="button"
                 onClick={() =>
                   incrementQuantity(item.productId, item.variantId)
                 }
-                className="grid size-8 place-items-center"
+                className="grid size-8 place-items-center rounded-full transition hover:bg-[#e7effc] focus-visible:ring-2 focus-visible:ring-[#005dbd] disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label={`Increase ${item.name} quantity`}
               >
                 <Plus size={14} />
@@ -82,7 +82,7 @@ export function CartItem({ item }: { item: CartItemType }) {
             </div>
           )}
           <span
-            className={`text-sm font-semibold ${outOfStock ? "text-[#8494a8]" : ""}`}
+            className={`text-sm font-semibold ${outOfStock ? "text-[#5a6b7e]" : ""}`}
           >
             {formatPrice(item.price * item.quantity)}
           </span>

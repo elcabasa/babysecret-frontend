@@ -4,14 +4,23 @@ import { z } from "zod";
 import { createWooCustomer, getCustomerByEmail } from "@/lib/woocommerce-auth";
 import { generateOtp, storeOtp } from "@/lib/otp-store";
 import { sendOtpEmail } from "@/lib/email";
+import { checkRateLimit, requestKey } from "@/lib/rate-limit";
 
 const schema = z.object({
-  firstName: z.string().min(2),
-  lastName: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(8),
-  phone: z.string().min(6),
+  firstName: z.string().min(2).max(100),
+  lastName: z.string().min(2).max(100),
+  email: z.string().email().max(254),
+  password: z.string().min(8).max(72),
+  phone: z.string().min(6).max(30),
 });
+
+/*
+ * Uniform responses: every outcome below answers the same success shape so
+ * callers cannot enumerate registered emails (including whether an address
+ * belongs to a Google-linked account). The client always advances to the
+ * verification step; accounts that already exist simply receive no new code.
+ */
+const REGISTERED = { success: true };
 
 export async function POST(request: Request) {
   try {
@@ -28,51 +37,61 @@ export async function POST(request: Request) {
     const { firstName, lastName, email, password, phone } = parsed.data;
     const normalized = email.toLowerCase().trim();
 
-    const existing = await getCustomerByEmail(normalized);
-    if (existing) {
-      const provider = existing.meta_data?.find(
-        (meta) => meta.key === "auth_provider",
-      )?.value;
+    const limit = checkRateLimit(
+      requestKey(request, `register:${normalized}`),
+      5,
+      60 * 60 * 1000,
+    );
 
-      if (provider === "google") {
-        return NextResponse.json(
-          {
-            message:
-              "You already registered with Google. Please sign in with Google.",
-            code: "GOOGLE_ACCOUNT",
-          },
-          { status: 409 },
-        );
-      }
-
+    if (!limit.allowed) {
       return NextResponse.json(
-        { message: "An account with this email already exists." },
-        { status: 409 },
+        { message: "Too many attempts. Please try again later." },
+        { status: 429 },
       );
     }
 
-    const user = await createWooCustomer({
-      email: normalized,
-      password,
-      firstName,
-      lastName,
-      phone,
-      authProvider: "password",
-      emailVerified: false,
-    });
+    const existing = await getCustomerByEmail(normalized);
 
-    const code = generateOtp();
-    await storeOtp(normalized, code, Number(user.id));
+    if (!existing) {
+      try {
+        const user = await createWooCustomer({
+          email: normalized,
+          password,
+          firstName,
+          lastName,
+          phone,
+          authProvider: "password",
+          emailVerified: false,
+        });
 
-    try {
-      await sendOtpEmail(normalized, code);
-    } catch (error) {
-      console.error("Register: OTP email send failed:", error);
+        const code = generateOtp();
+        await storeOtp(normalized, code, Number(user.id));
+
+        try {
+          await sendOtpEmail(normalized, code);
+        } catch (error) {
+          console.error("Register: OTP email send failed:", error);
+        }
+      } catch {
+        // TOCTOU: another request may have created the account between the
+        // lookup above and the create call. An account that now exists is
+        // the uniform-success path, not an error.
+        const raced = await getCustomerByEmail(normalized).catch(() => null);
+
+        if (!raced) {
+          console.error("Register error: account creation failed");
+          return NextResponse.json(
+            { message: "Could not create your account." },
+            { status: 500 },
+          );
+        }
+      }
     }
 
-    return NextResponse.json({ success: true, email: normalized });
-  } catch (error) {
-    console.error("Register error:", error);
+    return NextResponse.json({ ...REGISTERED, email: normalized });
+  } catch {
+    // Static message only: WooCommerce error text can echo the email back.
+    console.error("Register error: account creation failed");
     return NextResponse.json(
       { message: "Could not create your account." },
       { status: 500 },

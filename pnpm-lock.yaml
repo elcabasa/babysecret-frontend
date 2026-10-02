@@ -22,7 +22,10 @@ importers:
         version: 16.3.1(@babel/core@7.29.7)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       next-auth:
         specifier: 5.0.0-beta.32
-        version: 5.0.0-beta.32(next@16.3.1(@babel/core@7.29.7)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)
+        version: 5.0.0-beta.32(next@16.3.1(@babel/core@7.29.7)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(nodemailer@8.0.11)(react@19.2.8)
+      nodemailer:
+        specifier: ^8.0.11
+        version: 8.0.11
       react:
         specifier: 19.2.8
         version: 19.2.8
@@ -32,6 +35,9 @@ importers:
       react-hook-form:
         specifier: ^7.54.2
         version: 7.86.0(react@19.2.8)
+      server-only:
+        specifier: ^0.0.1
+        version: 0.0.1
       zod:
         specifier: ^3.24.1
         version: 3.25.76
@@ -45,6 +51,9 @@ importers:
       '@types/node':
         specifier: ^20
         version: 20.19.43
+      '@types/nodemailer':
+        specifier: ^8.0.2
+        version: 8.0.2
       '@types/react':
         specifier: ^19
         version: 19.2.18
@@ -688,6 +697,9 @@ packages:
 
   '@types/node@20.19.43':
     resolution: {integrity: sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA==}
+
+  '@types/nodemailer@8.0.2':
+    resolution: {integrity: sha512-c7M5ox8p0nEOfbJ2E9Qcmt8/QCu/VzsiAhzBiZbvky2PhKZDHpKB3sQHBM5MEZNkCfBOaS6S9//AGPRTNB7IaA==}
 
   '@types/react-dom@19.2.4':
     resolution: {integrity: sha512-Bsc+QHgp+P/F02XDzNCY9jnZNCUuLki36KT7VKrTXXLdHf+vHMNZnW1rVu5DNW/rCK+fya3DATySbLM4yhtKUw==}
@@ -1787,6 +1799,10 @@ packages:
     resolution: {integrity: sha512-D9UOmYG3UH1V+ENW56t5QXBwJw1YEY18ruVeus89Rw+SyIgjPkCO84bRzO3uNIYosJbNwiabWVn48o3uJLjxFQ==}
     engines: {node: '>=18'}
 
+  nodemailer@8.0.11:
+    resolution: {integrity: sha512-nrO/pDAUKl+wXX+lx16tDLbnm0fW6sK/x8mgohaCpg+CdCEl482bD4tCuAZk2DyliruiNTIZxRCoWkDqJEnAiA==}
+    engines: {node: '>=6.0.0'}
+
   oauth4webapi@3.8.7:
     resolution: {integrity: sha512-4RxcKxXjuItDFZ20RRPf4YTw3kpeXJyCgJFxVzJ068A7PNJ18st2Dg90tlC1LkSDS0GecroagCLHYEIVUhCAkw==}
 
@@ -2032,6 +2048,9 @@ packages:
     resolution: {integrity: sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==}
     engines: {node: '>=10'}
     hasBin: true
+
+  server-only@0.0.1:
+    resolution: {integrity: sha512-qepMx2JxAa5jjfzxG79yPPq+8BuFToHd1hm7kI+Z4zAq1ftQiP7HcxMhDDItrbtwVeLg/cY2JnKnrcFkmiswNA==}
 
   set-function-length@1.2.2:
     resolution: {integrity: sha512-pgRc4hJ4/sNjWCSS9AmnS40x3bNMDTknHgL5UaMBTMyJnU90EgWh1Rz+MC9eFu4BuN/UwZjKQuY/1v3rM7HMfg==}
@@ -2282,13 +2301,15 @@ snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
 
-  '@auth/core@0.41.3':
+  '@auth/core@0.41.3(nodemailer@8.0.11)':
     dependencies:
       '@panva/hkdf': 1.2.1
       jose: 6.2.10
       oauth4webapi: 3.8.7
       preact: 10.24.3
       preact-render-to-string: 6.5.11(preact@10.24.3)
+    optionalDependencies:
+      nodemailer: 8.0.11
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -2758,6 +2779,10 @@ snapshots:
   '@types/node@20.19.43':
     dependencies:
       undici-types: 6.21.0
+
+  '@types/nodemailer@8.0.2':
+    dependencies:
+      '@types/node': 20.19.43
 
   '@types/react-dom@19.2.4(@types/react@19.2.18)':
     dependencies:
@@ -3932,11 +3957,13 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  next-auth@5.0.0-beta.32(next@16.3.1(@babel/core@7.29.7)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8):
+  next-auth@5.0.0-beta.32(next@16.3.1(@babel/core@7.29.7)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(nodemailer@8.0.11)(react@19.2.8):
     dependencies:
-      '@auth/core': 0.41.3
+      '@auth/core': 0.41.3(nodemailer@8.0.11)
       next: 16.3.1(@babel/core@7.29.7)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       react: 19.2.8
+    optionalDependencies:
+      nodemailer: 8.0.11
 
   next@16.3.1(@babel/core@7.29.7)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     dependencies:
@@ -3971,6 +3998,8 @@ snapshots:
       semver: 6.3.1
 
   node-releases@2.0.53: {}
+
+  nodemailer@8.0.11: {}
 
   oauth4webapi@3.8.7: {}
 
@@ -4170,6 +4199,8 @@ snapshots:
   semver@6.3.1: {}
 
   semver@7.8.5: {}
+
+  server-only@0.0.1: {}
 
   set-function-length@1.2.2:
     dependencies:

@@ -1,9 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 
-import { getPaymentProvider } from "@/services/payment/payment.service";
+import {
+  getPaymentProvider,
+  isSufficientPayment,
+} from "@/services/payment/payment.service";
+import { getWooOrderByReference } from "@/lib/woocommerce-orders";
 
 type ProviderName = "paystack" | "flutterwave";
+
+/**
+ * Compares two signature strings without leaking through timing and without
+ * throwing when lengths differ (`timingSafeEqual` throws on length mismatch,
+ * which would turn a forged signature into a 500 instead of a 401).
+ */
+function signaturesEqual(a: string, b: string): boolean {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+
+  if (left.length !== right.length || left.length === 0) return false;
+
+  return crypto.timingSafeEqual(left, right);
+}
+
+/**
+ * Idempotency for successfully processed provider events (by provider event
+ * id). Retried webhooks after success acknowledge without re-updating the
+ * order; retries after failure fall through and reprocess normally.
+ */
+const succeededWebhookEvents = new Set<string>();
+
+function markSucceeded(eventId: string): void {
+  succeededWebhookEvents.add(eventId);
+
+  if (succeededWebhookEvents.size > 2000) {
+    const oldest = succeededWebhookEvents.values().next().value;
+    if (oldest !== undefined) succeededWebhookEvents.delete(oldest);
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +45,11 @@ export async function POST(request: NextRequest) {
 
     const paystackSignature = request.headers.get("x-paystack-signature");
 
-    const flutterwaveSignature = request.headers.get("flutterwave-signature");
+    // Flutterwave's documented header is `verif-hash`; accept the legacy
+    // alias too so existing dashboard configurations keep working.
+    const flutterwaveSignature =
+      request.headers.get("verif-hash") ??
+      request.headers.get("flutterwave-signature");
 
     let provider: ProviderName | null = null;
 
@@ -33,12 +71,7 @@ export async function POST(request: NextRequest) {
         .update(rawBody)
         .digest("hex");
 
-      if (
-        !crypto.timingSafeEqual(
-          Buffer.from(hash),
-          Buffer.from(paystackSignature),
-        )
-      ) {
+      if (!signaturesEqual(hash, paystackSignature)) {
         return NextResponse.json(
           { message: "Invalid Paystack signature." },
           { status: 401 },
@@ -50,6 +83,11 @@ export async function POST(request: NextRequest) {
 
     /*
      * FLUTTERWAVE SIGNATURE VERIFICATION
+     *
+     * Flutterwave sends the exact webhook secret hash configured in its
+     * dashboard as the `verif-hash` header (aliased here as
+     * `flutterwave-signature`). It is compared directly — Flutterwave does
+     * not HMAC the body for this header.
      */
     else if (flutterwaveSignature) {
       const secretHash = process.env.FLUTTERWAVE_WEBHOOK_SECRET_HASH;
@@ -63,17 +101,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const hash = crypto
-        .createHmac("sha256", secretHash)
-        .update(rawBody)
-        .digest("base64");
-
-      if (
-        !crypto.timingSafeEqual(
-          Buffer.from(hash),
-          Buffer.from(flutterwaveSignature),
-        )
-      ) {
+      if (!signaturesEqual(secretHash.trim(), flutterwaveSignature.trim())) {
         return NextResponse.json(
           { message: "Invalid Flutterwave signature." },
           { status: 401 },
@@ -97,6 +125,7 @@ export async function POST(request: NextRequest) {
      */
     let reference: string | undefined;
     let transactionId: string | undefined;
+    let providerEventId: string | undefined;
     let successfulPayment = false;
 
     if (provider === "paystack") {
@@ -105,6 +134,8 @@ export async function POST(request: NextRequest) {
       }
 
       reference = payload.data?.reference;
+      providerEventId =
+        payload.data?.id !== undefined ? `paystack:${payload.data.id}` : undefined;
       successfulPayment = true;
     }
 
@@ -125,11 +156,20 @@ export async function POST(request: NextRequest) {
         payload.data?.id || payload.data?.transaction_id || "",
       );
 
+      providerEventId = transactionId
+        ? `flutterwave:${transactionId}`
+        : undefined;
+
       successfulPayment = true;
     }
 
     if (!successfulPayment || !reference) {
       return NextResponse.json({ received: true });
+    }
+
+    // Already applied this exact provider event: acknowledge, don't re-apply.
+    if (providerEventId && succeededWebhookEvents.has(providerEventId)) {
+      return NextResponse.json({ received: true, alreadyProcessed: true });
     }
 
     /*
@@ -171,26 +211,10 @@ export async function POST(request: NextRequest) {
     );
 
     /*
-     * Find the order using our payment reference.
+     * Find the order by EXACT reference match (WooCommerce ignores
+     * meta_key/meta_value collection params — never orders[0]).
      */
-    const ordersResponse = await fetch(
-      `${wooUrl}/orders?meta_key=_babysecret_paystack_reference&meta_value=${encodeURIComponent(
-        reference,
-      )}`,
-      {
-        headers: {
-          Authorization: `Basic ${auth}`,
-        },
-      },
-    );
-
-    const orders = await ordersResponse.json();
-
-    if (!ordersResponse.ok || !Array.isArray(orders)) {
-      throw new Error("Could not find WooCommerce order.");
-    }
-
-    const order = orders[0];
+    const order = await getWooOrderByReference(reference);
 
     if (!order) {
       console.error("No order found for webhook reference:", reference);
@@ -201,13 +225,39 @@ export async function POST(request: NextRequest) {
     /*
      * Idempotency:
      * If already processing or completed,
-     * don't update it again.
+     * don't update it again. A replayed provider event for an order that is
+     * still open falls through to the checks below (which re-verify amount
+     * and stock state through the live APIs), so only genuinely successful,
+     * fully-applied events are skipped via `succeededWebhookEvents`.
      */
     if (order.status === "processing" || order.status === "completed") {
       return NextResponse.json({
         received: true,
         alreadyProcessed: true,
       });
+    }
+
+    /*
+     * Amount enforcement (same rule as the callback verification): the
+     * provider-reported amount must cover the WooCommerce order total in NGN
+     * for this reference. Underpaid transactions never mark the order paid.
+     */
+    const orderTotal = Number(order.total);
+
+    if (
+      !isSufficientPayment({
+        verification,
+        expectedReference: reference,
+        orderTotal,
+        orderCurrency: order.currency ?? "NGN",
+      })
+    ) {
+      console.error("Webhook payment amount insufficient for order total:", {
+        provider,
+        orderId: order.id,
+      });
+
+      return NextResponse.json({ received: true });
     }
 
     /*
@@ -228,15 +278,21 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    const updatedOrder = await updateResponse.json();
-
     if (!updateResponse.ok) {
-      console.error("WooCommerce webhook update failed:", updatedOrder);
+      // Status only: the response body can echo customer PII.
+      console.error(
+        `WooCommerce webhook order update failed (HTTP ${updateResponse.status}).`,
+      );
 
       throw new Error("Could not update WooCommerce order.");
     }
 
-    console.log("Payment webhook processed successfully:", {
+    // A retried delivery of this exact provider event acknowledges without
+    // touching the order again. Failures never land here, so a retry after
+    // a failure still reprocesses normally.
+    if (providerEventId) markSucceeded(providerEventId);
+
+    console.info("Payment webhook processed successfully:", {
       provider,
       reference,
       orderId: order.id,

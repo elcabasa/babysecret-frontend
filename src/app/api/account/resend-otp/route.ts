@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { sendOtpEmail } from "@/lib/email";
-import { generateOtp, storeOtp } from "@/lib/otp-store";
+import { generateOtp, otpCooldownRemainingMs, storeOtp } from "@/lib/otp-store";
 import { getCustomerByEmail } from "@/lib/woocommerce-auth";
+import { checkRateLimit, requestKey } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email(),
@@ -22,6 +23,21 @@ export async function POST(request: Request) {
     }
 
     const email = parsed.data.email.toLowerCase().trim();
+
+    // Abuse backstop independent of the per-account send cooldown below.
+    const limit = checkRateLimit(
+      requestKey(request, `otp-resend:${email}`),
+      5,
+      60 * 60 * 1000,
+    );
+
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { message: "Too many requests. Please try again later." },
+        { status: 429 },
+      );
+    }
+
     const customer = await getCustomerByEmail(email);
 
     if (!customer) {
@@ -32,20 +48,26 @@ export async function POST(request: Request) {
       customer.meta_data?.find((meta) => meta.key === "email_verified")
         ?.value === "true";
 
-    if (isVerified) {
-      return NextResponse.json(
-        { message: "This email is already verified." },
-        { status: 409 },
-      );
-    }
+    // Uniform success either way: verified state stays unenumerable, and no
+    // code is mailed to an already-verified account.
+    if (!isVerified) {
+      const cooldownMs = await otpCooldownRemainingMs(email);
 
-    const code = generateOtp();
-    await storeOtp(email, code, customer.id);
+      if (cooldownMs > 0) {
+        return NextResponse.json(
+          { message: "Please wait before requesting another code." },
+          { status: 429 },
+        );
+      }
 
-    try {
-      await sendOtpEmail(email, code);
-    } catch (error) {
-      console.error("Resend OTP: email send failed:", error);
+      const code = generateOtp();
+      await storeOtp(email, code, customer.id);
+
+      try {
+        await sendOtpEmail(email, code);
+      } catch (error) {
+        console.error("Resend OTP: email send failed:", error);
+      }
     }
 
     return NextResponse.json({ success: true });
