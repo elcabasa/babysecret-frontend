@@ -45,13 +45,13 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between p-4 pt-3">
-        <div>
+      <div className="flex items-center justify-between gap-2 p-3 pt-3 sm:p-4 sm:pt-3">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
           <span className="text-base font-bold text-[#102a43]">
             {formatPrice(product.price)}
           </span>
           {product.regularPrice && product.regularPrice > product.price && (
-            <span className="ml-2 text-xs text-[#5a6b7e] line-through">
+            <span className="text-xs text-[#5a6b7e] line-through">
               {formatPrice(product.regularPrice)}
             </span>
           )}
