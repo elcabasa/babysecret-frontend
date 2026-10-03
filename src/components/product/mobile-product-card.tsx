@@ -50,7 +50,7 @@ export function MobileProductCard({ product }: { product: Product }) {
               {formatPrice(product.price)}
             </span>
             {product.regularPrice && product.regularPrice > product.price && (
-              <span className="font-secondary text-xs leading-4 text-[#737784] line-through">
+              <span className="font-secondary text-xs leading-4 text-[#5a6b7e] line-through">
                 {formatPrice(product.regularPrice)}
               </span>
             )}

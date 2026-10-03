@@ -15,7 +15,12 @@ async function verifyItems(items: CartItem[]): Promise<CartItem[]> {
 
   for (const item of items) {
     const product = await getProductById(item.productId);
-    if (!product || product.purchasable === false) continue;
+    if (
+      !product ||
+      product.purchasable === false ||
+      product.stockStatus === "out-of-stock"
+    )
+      continue;
 
     verified.push({
       productId: product.id,

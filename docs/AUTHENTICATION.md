@@ -8,51 +8,31 @@ Key modules:
 - `src/lib/woocommerce-auth.ts` — WooCommerce REST auth helpers (authenticate, create/update customer, email-verified meta)
 - `src/lib/auth.actions.ts` — server actions: `loginAction`, `googleAction`, `logoutAction`
 - `src/lib/otp-store.ts` / `src/lib/reset-token-store.ts` — OTP / reset-token storage persisted in WooCommerce customer meta
-- `src/lib/email.ts` — transaction emails via Brevo
+- `src/lib/email.ts` — OTP/reset messages sent through server-only Titan SMTP
 - `src/app/api/account/*` — register, verify-email, resend-otp, forgot-password, reset-password
 - `src/components/auth/*` — forms (login, register, forgot, reset, verify-email) and Google button
 
+OTP and password-reset delivery use Titan SMTP. Transport ownership, credentials, and operational behavior are documented in [`EMAIL.md`](EMAIL.md); required variables are listed in [`ENVIRONMENT.md`](ENVIRONMENT.md).
+
 ## Environment
 
-| Variable                                     | Required       | Purpose                                                                                       |
-| -------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------- |
-| `AUTH_SECRET`                                | yes            | JWT signing secret                                                                            |
-| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`      | for Google     | Google OAuth app                                                                              |
-| `NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED`           | no             | `"true"` renders the Google button                                                            |
-| `NEXT_PUBLIC_APP_URL`                        | no             | Base URL for emailed reset links                                                              |
-| `AUTH_TRUST_HOST`                            | for non-Vercel | Lets NextAuth trust the host (`trustHost: true` is set in `src/auth.ts`; Vercel auto-sets it) |
-| `BREVO_API_KEY` / `SMTP_FROM`                | for email      | OTP/reset delivery via Brevo                                                                  |
-| `WOOCOMMERCE_REST_URL` + consumer key/secret | yes            | Customer CRUD + auth                                                                          |
+The authentication-related variables are:
+
+- `AUTH_SECRET` — required JWT signing secret, server-only.
+- `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` — required only for Google login, server-only.
+- `NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED` — public UI flag; `"true"` renders the Google button.
+- `NEXT_PUBLIC_APP_URL` — public base URL used in emailed reset links.
+- `AUTH_TRUST_HOST` — host-trust behavior for non-Vercel deployments.
+- `WOOCOMMERCE_REST_URL` plus consumer key/secret — server-only customer CRUD and authentication.
+- `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASSWORD`, and `EMAIL_FROM` — server-only Titan SMTP delivery for OTP/reset mail.
 
 ## Sign-up flow (email + password)
 
-1. `POST /api/account/register` validates `firstName`, `lastName`, `email`, `password`, `phone`.
+1. `POST /api/account/register` validates `firstName`, `lastName`, `email`, `password`, and `phone`. Passwords must contain at least 8 characters.
 2. If the email already exists: `409` (with `code: "GOOGLE_ACCOUNT"` if the account is Google-created).
-3. Otherwise it creates the WooCommerce customer:
-
-   ```json
-   {
-     "email": "...",
-     "username": "<email>",
-     "password": "...",
-     "first_name": "...",
-     "last_name": "...",
-     "billing": {
-       "email": "...",
-       "first_name": "...",
-       "last_name": "...",
-       "phone": "..."
-     },
-     "shipping": { "first_name": "...", "last_name": "..." },
-     "meta_data": [
-       { "key": "auth_provider", "value": "password" },
-       { "key": "email_verified", "value": "false" }
-     ]
-   }
-   ```
-
-4. A 6-digit OTP is generated, persisted on the customer (10-minute TTL), and emailed — an email-delivery failure does not fail registration (the code can be re-sent later). The client redirects to `/verify-email?email=…`.
-5. `POST /api/account/verify-email` verifies the code against the persisted meta and flips `email_verified` to `true` on the customer. `/api/account/resend-otp` writes a fresh code to the meta and re-emails it.
+3. Otherwise it creates the WooCommerce customer with `auth_provider = password` and `email_verified = false`.
+4. A 6-digit OTP is generated with `crypto.randomInt()`, persisted on the customer with a 10-minute TTL, and emailed through Titan SMTP. An email-delivery failure does not fail registration because the code can be re-sent later. The client redirects to `/verify-email?email=…`.
+5. `POST /api/account/verify-email` verifies the code against persisted customer meta. A successful verification clears the OTP and flips `email_verified` to `true`. Invalid or expired codes return `400`. `/api/account/resend-otp` writes a fresh code to customer meta and re-emails it.
 
 > **Storage note:** OTP codes and reset tokens are stored as WooCommerce customer meta (`babysecret_otp_code` / `babysecret_otp_expires` and `babysecret_reset_token` / `babysecret_reset_expires`). The keys are deliberately **not** underscore-prefixed because the WooCommerce REST API rejects loading private (`_`-prefixed) meta. This makes the flow survive multiple server instances (Vercel) and restarts.
 
@@ -69,8 +49,21 @@ Key modules:
 
 ## Forgot / reset password
 
-1. `POST /api/account/forgot-password` mails a tokenized link (`/reset-password?token=…`) if the account exists (it always returns `success` to avoid email enumeration).
-2. Tokens are persisted on the customer for 30 minutes (`babysecret_reset_token` / `babysecret_reset_expires`; the token embeds the customer id so a bare token resolves back to the account). `POST /api/account/reset-password` validates and consumes the token, then sets the new WooCommerce customer password.
+```text
+Registration
+→ OTP
+→ verification
+
+Forgot password
+→ reset token
+→ reset link
+→ new password
+```
+
+1. `POST /api/account/forgot-password` validates the email, then mails a tokenized link (`/reset-password?token=…`) only when the account exists. It always returns `success`, including for unknown addresses, to avoid account enumeration.
+2. Reset tokens use `crypto.randomUUID()`, persist on the customer for 30 minutes, and embed the customer ID so a bare token resolves back to the correct account.
+3. `POST /api/account/reset-password` requires a token of at least 8 characters and a password of at least 8 characters. It validates and **consumes** the token: the stored token and expiry are cleared during the same call, so a used token cannot be replayed. An invalid or expired token is rejected before the password is touched.
+4. Reset mail is sent through Titan SMTP. Passwords and tokens are never logged.
 
 ## Session & header behaviour
 
@@ -90,6 +83,6 @@ Login/logout run as server actions (`signIn`/`signOut` from `@/auth`), so the JW
 - OTP and reset tokens persist in WooCommerce customer meta, so codes survive server restarts and multi-instance (Vercel) deployments.
 - The JWT sign-in endpoint must be **installed and active on the WordPress store**: `wp-json/jwt-auth/v1/token` (the "JWT Authentication for WP REST API" plugin). This is WordPress configuration, not code — the frontend intentionally reports a clear "sign-in service not available" message when it is missing.
 - Customer meta used for auth is stored with plain keys so the WooCommerce REST API returns it (`_`-prefixed meta is private and hidden by the API).
-- `trustHost: true` is set in `src/auth.ts`, so the Google OAuth callback URL is derived from the request host. Register the `/api/auth/callback/google` redirect URI in the Google Cloud Console for **each** environment: `http://localhost:3000` (dev), `https://babysecret-frontend-pro9.vercel.app` (test deploy), and the production domain. No Vercel URL is hard-coded.
+- `trustHost: true` is set in `src/auth.ts`, so the Google OAuth callback URL is derived from the request host. Register the `/api/auth/callback/google` redirect URI in the Google Cloud Console for **each** environment: `http://localhost:3000` (dev), the preview deployment domain (test), and the production domain. No test URL is hard-coded.
 - The Google provider uses `allowDangerousEmailAccountLinking` deliberately so first-time Google users are linked to WooCommerce customers of the same email, while the `signIn` callback rejects attempts to take over an existing password-protected account (`ACCOUNT_PASSWORD_COLLISION`).
 - WooCommerce consumer credentials and Google OAuth secrets are server-only (`WOOCOMMERCE_*`, `AUTH_GOOGLE_*`); they never reach the browser bundle.

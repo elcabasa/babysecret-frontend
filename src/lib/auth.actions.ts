@@ -1,19 +1,22 @@
 "use server";
 
 import { AuthError } from "next-auth";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { signIn, signOut } from "@/auth";
 import {
   authenticateWooCommerce,
-  getCustomerByEmail,
   WooCommerceAuthError,
 } from "@/lib/woocommerce-auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const homeRedirect = "/";
 
-const GOOGLE_ACCOUNT_MESSAGE =
-  "This account uses Google Sign-In. Please log in using the Google button.";
+// Uniform authentication failure: identical message whether the account is
+// missing, unverified, Google-linked, or the password is wrong, so login
+// responses cannot enumerate accounts.
+const INVALID_CREDENTIALS_MESSAGE = "Invalid email or password.";
 
 export async function loginAction(
   _prevState: { error?: string },
@@ -24,24 +27,23 @@ export async function loginAction(
     .trim();
   const password = String(formData.get("password") ?? "");
 
+  // Credential-stuffing backstop (per account + IP).
+  const forwarded = (await headers()).get("x-forwarded-for");
+  const ip = forwarded?.split(",")[0]?.trim() || "unknown";
+  const limit = checkRateLimit(
+    `login:${ip}:${email}`,
+    10,
+    10 * 60 * 1000,
+  );
+
+  if (!limit.allowed) {
+    return { error: "Too many attempts. Please try again later." };
+  }
+
   let user;
   try {
     ({ user } = await authenticateWooCommerce(email, password));
   } catch (error) {
-    let customer = null;
-    try {
-      customer = await getCustomerByEmail(email);
-    } catch {
-      customer = null;
-    }
-    const provider = customer?.meta_data?.find(
-      (meta) => meta.key === "auth_provider",
-    )?.value;
-
-    if (provider === "google") {
-      return { error: GOOGLE_ACCOUNT_MESSAGE };
-    }
-
     if (error instanceof WooCommerceAuthError) {
       switch (error.code) {
         case "AUTH_ENDPOINT_NOT_FOUND":
@@ -55,14 +57,12 @@ export async function loginAction(
             error:
               "We could not reach the store. Please check your connection and try again.",
           };
-        case "ACCOUNT_NOT_FOUND":
-          return { error: "No account was found for this email." };
         default:
-          return { error: "Invalid email or password." };
+          return { error: INVALID_CREDENTIALS_MESSAGE };
       }
     }
 
-    return { error: "Invalid email or password." };
+    return { error: INVALID_CREDENTIALS_MESSAGE };
   }
 
   if (!user.emailVerified) {
@@ -86,6 +86,12 @@ export async function loginAction(
 }
 
 export async function googleAction(): Promise<void> {
+  // The UI hides the Google button when the flag is off; enforce it here too
+  // so the provider cannot be invoked directly with the flag disabled.
+  if (process.env.NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED !== "true") {
+    return;
+  }
+
   try {
     await signIn("google", { redirectTo: homeRedirect });
   } catch (error) {

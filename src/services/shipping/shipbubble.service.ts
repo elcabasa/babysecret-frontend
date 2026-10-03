@@ -29,11 +29,13 @@ const pickupDefaults = {
   lastName: process.env.SHIPPING_PICKUP_LAST_NAME ?? "Store",
   email: process.env.SHIPPING_PICKUP_EMAIL ?? "delivery@babysecret.com",
   phone: process.env.SHIPPING_PICKUP_PHONE ?? "+2348012345678",
-  line1: process.env.SHIPPING_PICKUP_ADDRESS ?? "Ikeja, Lagos",
-  city: process.env.SHIPPING_PICKUP_CITY ?? "Ikeja",
+  // Same Terminal origin as tship.service.ts (Flawless Plaza, Ojo, Lagos, NG,
+  // 102101). Shipbubble is currently disabled; kept consistent for future use.
+  line1: process.env.SHIPPING_PICKUP_ADDRESS ?? "Flawless Plaza",
+  city: process.env.SHIPPING_PICKUP_CITY ?? "Ojo",
   state: process.env.SHIPPING_PICKUP_STATE ?? "Lagos",
   country: process.env.SHIPPING_PICKUP_COUNTRY ?? "NG",
-  zip: process.env.SHIPPING_PICKUP_ZIP ?? "121006",
+  zip: process.env.SHIPPING_PICKUP_ZIP ?? "102101",
 };
 
 const countryNames: Record<string, string> = {

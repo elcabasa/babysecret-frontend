@@ -51,8 +51,19 @@ async function readResponseText(response: Response): Promise<string> {
   }
 }
 
-function previewBody(text: string): string {
-  return text.slice(0, 400).replace(/\s+/g, " ");
+/**
+ * Extracts WooCommerce's machine-readable error `code` (e.g.
+ * `registration-error-email-exists`) for logs. The human `message` and the
+ * raw body are deliberately never logged — they can echo customer PII such
+ * as names, emails, or phone numbers.
+ */
+function errorCode(text: string): string {
+  try {
+    const data = JSON.parse(text) as { code?: unknown };
+    return typeof data.code === "string" ? data.code : "";
+  } catch {
+    return "";
+  }
 }
 
 type WooMetaData = { id?: number; key: string; value: unknown };
@@ -154,9 +165,9 @@ export async function getCustomerByEmail(
   }
 
   if (!response.ok) {
-    const body = previewBody(await readResponseText(response));
+    const code = errorCode(await readResponseText(response));
     console.error(
-      `[auth] WooCommerce customer lookup failed status=${response.status} path=/customers body=${body}`,
+      `[auth] WooCommerce customer lookup failed status=${response.status} path=/customers code=${code}`,
     );
     throw new Error(`WooCommerce customer lookup failed (${response.status})`);
   }
@@ -233,7 +244,7 @@ export async function authenticateWooCommerce(
 
   if (!tokenResponse.ok) {
     console.error(
-      `[auth] jwt-auth failed status=${tokenResponse.status} code=${tokenData.code ?? ""} message=${tokenData.message ?? ""}`,
+      `[auth] jwt-auth failed status=${tokenResponse.status} code=${tokenData.code ?? ""}`,
     );
 
     if (tokenResponse.status === 404) {
@@ -264,9 +275,7 @@ export async function authenticateWooCommerce(
   }
 
   if (!tokenData.token) {
-    console.error(
-      `[auth] jwt-auth returned no token body=${JSON.stringify(tokenData)}`,
-    );
+    console.error("[auth] jwt-auth returned no token");
     throw new WooCommerceAuthError(
       "AUTH_SERVICE_ERROR",
       "The store sign-in service is not available.",
@@ -326,7 +335,7 @@ export async function createWooCustomer(
 
   if (!response.ok) {
     console.error(
-      `[auth] WooCommerce create customer failed status=${response.status} path=/customers body=${previewBody(raw)}`,
+      `[auth] WooCommerce create customer failed status=${response.status} path=/customers code=${errorCode(raw)}`,
     );
     throw new Error(data?.message ?? "Could not create your account.");
   }
@@ -354,7 +363,7 @@ export async function updateWooCustomer(
 
   if (!response.ok) {
     console.error(
-      `[auth] WooCommerce update customer failed status=${response.status} path=/customers/${id} body=${previewBody(raw)}`,
+      `[auth] WooCommerce update customer failed status=${response.status} path=/customers/${id} code=${errorCode(raw)}`,
     );
     throw new Error(data?.message ?? "Could not update your account.");
   }

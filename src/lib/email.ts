@@ -1,67 +1,73 @@
-const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
+/**
+ * Authentication email facade.
+ *
+ * Order transactional emails live in `src/lib/email/*` — this module keeps the
+ * existing account-email API (`sendOtpEmail`, `sendResetEmail`) used by the
+ * register / verify / forgot-password routes, now backed by the same server-side
+ * SMTP service so the store has a single email transport.
+ *
+ * This is separate from Google OAuth: NextAuth handles sign-in and never sends
+ * email itself.
+ */
+import "server-only";
 
-function sender() {
-  return {
-    name: "Baby Secret",
-    email: process.env.SMTP_FROM ?? "info@babysecret.com",
-  };
-}
+import { sendMail } from "@/lib/email/mailer";
+import { renderEmail } from "@/lib/email/layout";
 
-type SendArgs = {
+/**
+ * Sends an email through the server-side SMTP service.
+ *
+ * Kept for backwards compatibility with existing callers; returns the send
+ * result so callers can log failures without surfacing SMTP internals.
+ */
+export function sendEmail(args: {
   to: string;
   subject: string;
   html: string;
   text?: string;
-};
-
-export async function sendEmail({ to, subject, html, text }: SendArgs) {
-  const apiKey = process.env.BREVO_API_KEY;
-
-  if (!apiKey) {
-    console.warn("BREVO_API_KEY is not set; skipping email send.");
-    return;
-  }
-
-  try {
-    const response = await fetch(BREVO_API_URL, {
-      method: "POST",
-      headers: {
-        "api-key": apiKey,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        sender: sender(),
-        to: [{ email: to }],
-        subject,
-        htmlContent: html,
-        textContent: text,
-      }),
-    });
-
-    if (!response.ok) {
-      const detail = await response.text();
-      console.error("Brevo email failed:", response.status, detail);
-    }
-  } catch (error) {
-    console.error("Brevo email error:", error);
-  }
+}) {
+  return sendMail({
+    to: args.to,
+    subject: args.subject,
+    html: args.html,
+    text: args.text ?? "",
+  });
 }
 
 export function sendOtpEmail(to: string, code: string) {
-  return sendEmail({
+  const { html, text } = renderEmail({
+    preheader: `Your Baby Secret verification code is ${code}.`,
+    title: "Verify your Baby Secret account",
+    body: [
+      "Welcome to Baby Secret.",
+      `Your verification code is ${code}. It expires in 10 minutes.`,
+      "If you didn't create an account, you can ignore this email.",
+    ],
+  });
+
+  return sendMail({
     to,
     subject: "Verify your Baby Secret account",
-    html: `<p>Hi there,</p><p>Your Baby Secret verification code is:</p><h2>${code}</h2><p>This code expires in 10 minutes.</p>`,
-    text: `Your Baby Secret verification code is ${code}. It expires in 10 minutes.`,
+    html,
+    text,
   });
 }
 
 export function sendResetEmail(to: string, resetUrl: string) {
-  return sendEmail({
+  const { html, text } = renderEmail({
+    preheader: "Reset your Baby Secret password.",
+    title: "Reset your password",
+    body: [
+      "We received a request to reset your Baby Secret password.",
+      "Use the button below to choose a new password. If you didn't request this, you can ignore this email.",
+    ],
+    cta: { url: resetUrl, label: "Choose a new password" },
+  });
+
+  return sendMail({
     to,
     subject: "Reset your Baby Secret password",
-    html: `<p>Hi there,</p><p>We received a request to reset your password. Click the link below to choose a new password:</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you did not request this, you can ignore this email.</p>`,
-    text: `Reset your password: ${resetUrl}`,
+    html,
+    text,
   });
 }

@@ -26,8 +26,8 @@ export function WishlistButton({
       aria-pressed={saved}
       className={
         compact
-          ? "grid size-10 place-items-center rounded-full bg-white/90 text-[#3051a0] shadow-sm transition hover:bg-white"
-          : "inline-flex items-center gap-2 rounded-full border border-[#3051a0] px-5 py-3 text-sm font-semibold text-[#3051a0]"
+          ? "grid size-10 place-items-center rounded-full bg-white/90 text-[#3051a0] shadow-sm transition hover:bg-white focus-visible:ring-2 focus-visible:ring-[#005dbd] focus-visible:ring-offset-1"
+          : "inline-flex items-center gap-2 rounded-full border border-[#3051a0] px-5 py-3 text-sm font-semibold text-[#3051a0] transition hover:bg-[#e7effc] focus-visible:ring-2 focus-visible:ring-[#005dbd] focus-visible:ring-offset-1"
       }
     >
       <Heart size={compact ? 18 : 16} fill={saved ? "currentColor" : "none"} />

@@ -1,79 +1,124 @@
 # Payments
 
-Bank Transfer is currently the ONLY customer-facing payment method. The shopper places the order, transfers the exact total to the store's receiving account, then submits their transfer details; the order stays pending (`on-hold`) until the transfer is manually verified. Paystack/Flutterwave integrations are fully intact but hidden from the UI for future re-enablement.
+Bank Transfer is the only payment method shown to customers. Paystack and Flutterwave remain fully implemented but hidden, so they can be re-enabled without rebuilding the payment integration.
 
 Key modules:
 
-- `src/config/bank.ts` — `BANK_DETAILS` + `getBankDetails()`: the single source of truth for the receiving account (bank name, account name, account number), read by both server and UI
-- `src/services/payment/payment.service.ts` — `getPaymentProvider()` + bank-transfer / Paystack / Flutterwave / demo providers
+- `src/services/payment/payment.service.ts` — provider selection and Bank Transfer, Paystack, Flutterwave, and demo providers
 - `src/services/payment/payment.types.ts` — shared provider contracts
-- `src/app/api/checkout/route.ts` — creates the order and initializes payment
-- `src/app/awaiting-payment/page.tsx` — bank details, order total, transfer-confirmation flow
-- `src/app/api/payment/bank-transfer/confirm/route.ts` — records transfer details, keeps the order `on-hold`
-- `src/app/api/payment/verify/route.ts` — verifies card-gateway payments after redirect (only used when those gateways are re-enabled)
-- `src/app/api/webhooks/payment/route.ts` — async payment-status receiver (card gateways)
+- `src/components/forms/checkout-form.tsx` — visible payment options and checkout submission
+- `src/app/api/checkout/route.ts` — order creation and payment initialization
+- `src/app/awaiting-payment/page.tsx` — transfer instructions and transfer-claim form
+- `src/app/api/payment/bank-transfer/details/route.ts` — authoritative order total and receiving account
+- `src/app/api/payment/bank-transfer/confirm/route.ts` — transfer-claim recording
+- `src/app/api/payment/verify/route.ts` — card-gateway callback, used only if those gateways are visible again
+- `src/app/api/webhooks/payment/route.ts` — signed card-gateway webhook receiver
 
-## Active method: Bank Transfer
+## Current customer payment
 
-1. `POST /api/checkout` validates the payload, re-verifies the delivery quote, then creates the **WooCommerce order** (`set_paid: false`) with billing/shipping addresses, line items, `shipping_lines`, and meta including `_babysecret_paystack_reference = <reference>`.
-2. The bank-transfer provider returns the receiving account + authoritative order total (from the created order, never the client). The client routes to `/awaiting-payment?reference=…&amount=…&bankName=…&accountName=…&accountNumber=…`.
-3. `/awaiting-payment` shows the account details (copy buttons), the exact total, and an **"I Have Made The Transfer"** button revealing a confirmation form (transfer/payer name + transfer reference).
-4. `POST /api/payment/bank-transfer/confirm` validates the details and updates the order to **`on-hold` with `set_paid: false`**, storing:
+Current customer payment:
+
+- Bank Transfer
+
+Retained but hidden:
+
+- Paystack
+- Flutterwave
+
+The checkout UI filters `PAYMENT_METHOD_OPTIONS` through `ENABLED_PAYMENT_METHODS` in `src/components/forms/checkout-form.tsx`. That list is currently:
+
+```ts
+["bank_transfer"]
+```
+
+## Bank-transfer flow
+
+```text
+Customer places order
+→ WooCommerce order unpaid/on-hold
+→ bank details displayed
+→ customer transfers money
+→ customer clicks "I've Made the Transfer"
+→ transfer claim recorded
+→ order remains unpaid/on-hold
+→ admin verifies bank payment
+→ admin changes order to Processing
+→ WooCommerce sends payment/order confirmation
+```
+
+Details:
+
+1. `POST /api/checkout` creates an unpaid WooCommerce order with `set_paid: false`.
+2. The Bank Transfer provider returns `awaiting_transfer` with the receiving account and authoritative WooCommerce order total.
+3. Next.js emails custom awaiting-payment instructions containing the exact receiving account, payment reference, total, fulfillment details, and verification explanation.
+4. The customer is routed to `/awaiting-payment?reference=…`. The authoritative total and account are re-read through `GET /api/payment/bank-transfer/details`; only the opaque reference travels in the URL.
+5. The customer transfers the exact amount and submits the payer/transfer name plus transfer reference.
+6. `POST /api/payment/bank-transfer/confirm` records:
    - `_babysecret_bank_transfer_awaiting = "true"`
-   - `_babysecret_bank_transfer_confirmed_at` (timestamp)
+   - `_babysecret_bank_transfer_confirmed_at`
    - `_babysecret_bank_payer_name`
    - `_babysecret_bank_transfer_reference`
-5. An admin verifies the transfer against the payer name/reference before processing. The frontend never marks the order paid.
+7. The order remains `on-hold` with `set_paid: false`.
+8. The route sends the custom admin transfer-claim notification.
+9. An administrator verifies the funds in the bank account, then moves the WooCommerce order to Processing.
+10. WooCommerce + FluentSMTP sends the canonical customer Processing Order confirmation.
 
-## Hidden methods: Paystack / Flutterwave (kept for re-enablement)
+**The frontend must never mark a bank transfer as paid.** “I’ve Made the Transfer” records a claim; only verified WooCommerce status means payment.
 
-The checkout form renders payment options from `PAYMENT_METHOD_OPTIONS` filtered by `ENABLED_PAYMENT_METHODS` (`src/components/forms/checkout-form.tsx`), currently `["bank_transfer"]`. To re-enable a gateway, add `"paystack"` / `"flutterwave"` to that list — the providers, `/api/checkout` handling, `/api/payment/verify` callback, and webhook receiver all still work.
+## Bank details configuration
 
-`PAYMENT_PROVIDER` chooses the gateway for the legacy redirect flow:
+Server-side receiving-account configuration:
 
-| Value | Gateway |
-| --- | --- |
-| `paystack` | Paystack (`PAYSTACK_SECRET_KEY`) |
-| `flutterwave` | Flutterwave (`FLUTTERWAVE_SECRET_KEY`) |
-| *(anything else / unset)* | Demo provider — never initializes or verifies real payments |
+- `MONIEPOINT_BANK_NAME`
+- `MONIEPOINT_ACCOUNT_NAME`
+- `MONIEPOINT_ACCOUNT_NUMBER`
 
-## Environment
+There are no hardcoded fallbacks. Missing or blank values throw `BankDetailsNotConfiguredError` instead of displaying a potentially wrong account.
 
-| Variable | Purpose |
-| --- | --- |
-| Bank-transfer account | Hardcoded in `src/config/bank.ts` — public receiving-account details, not a secret |
-| `PAYMENT_PROVIDER` | Gateway name (`paystack` / `flutterwave`) for the redirect flow |
-| `PAYSTACK_SECRET_KEY` | Paystack secret key (server-only) |
-| `FLUTTERWAVE_SECRET_KEY` | Flutterwave secret key (server-only) |
-| `WOOCOMMERCE_REST_URL` + consumer key/secret | Order CRUD |
-| `NEXT_PUBLIC_APP_URL` | Base URL used for the payment callback |
+Client display fallback:
 
-## Gateway redirect sequence (Paystack/Flutterwave, when re-enabled)
+- `NEXT_PUBLIC_BANK_NAME`
+- `NEXT_PUBLIC_BANK_ACCOUNT_NAME`
+- `NEXT_PUBLIC_BANK_ACCOUNT_NUMBER`
 
-1. `POST /api/checkout` creates the order as above, then initializes the gateway with the authoritative total:
-   ```text
-   reference    = babysecret-<timestamp>
-   callback_url = {NEXT_PUBLIC_APP_URL}/api/payment/verify?reference={reference}
-   ```
-2. On success the API returns `{ orderId, reference, authorizationUrl }`; the client redirects the shopper to `authorizationUrl`.
+The awaiting-payment page prefers the server lookup response. The public variables are only a display fallback, and a failed lookup withholds transfer instructions rather than showing a partial unverified view.
 
-## Verification & order fulfilment
+Current customer-visible receiving account:
 
-`GET /api/payment/verify?reference=…` (the gateway callback) does:
+- Bank: **MoniePoint**
+- Account name: **Flawless Cosmetics Limited**
+- Account number: **8262328039**
 
-1. `verifyPayment(reference)` against the gateway — Paystack checks `data.status === "success"`; Flutterwave also matches `tx_ref` and `currency === "NGN"`.
-2. Failure → redirect to `/checkout?payment=failed&reference=…`.
-3. Looks up the WooCommerce order by `_babysecret_paystack_reference` meta.
-4. If the order carries a `_babysecret_tship_rate_id`, arranges the shipment with TShip and stores `_babysecret_tship_shipment_id` / `_babysecret_tship_tracking`.
-5. Marks the order `processing` and `set_paid: true` with `transaction_id = reference`.
-6. Redirects the shopper to `/order-confirmation?reference=…`.
+These are intentionally customer-visible business details. They are not API credentials, and no API credential may be added to customer-visible configuration.
 
-### Webhook receiver
+See [`ENVIRONMENT.md`](ENVIRONMENT.md) for public versus server-only handling.
 
-`POST /api/webhooks/payment` is the async status receiver (gateway webhook → optional double-check of payment state and order status updates).
+## Hidden Paystack/Flutterwave integrations
 
-## Notes
+Their code remains preserved for future re-enablement:
 
-- Never trust the client-sent amount: the payment amount always comes from the WooCommerce order `total`.
-- The reference ties the payment to the WooCommerce order (`_babysecret_paystack_reference` meta).
-- Receiving-account details are public by design; gateway/WooCommerce secrets stay server-only.
+- Provider initialization and verification in `payment.service.ts`.
+- Checkout handling for gateway authorization URLs.
+- `/api/payment/verify` callback handling.
+- `/api/webhooks/payment` signature verification and provider re-verification.
+- Successful gateway verification updates the matching WooCommerce order to `processing` with `set_paid: true`; for TShip delivery orders, shipment arrangement uses the stored rate.
+
+To re-enable a hidden gateway through the existing configuration:
+
+1. Add `"paystack"` and/or `"flutterwave"` to `ENABLED_PAYMENT_METHODS` in `src/components/forms/checkout-form.tsx`.
+2. Configure the corresponding server-only secret in the deployment environment.
+3. If Flutterwave webhooks will be used, configure `FLUTTERWAVE_WEBHOOK_SECRET_HASH`.
+4. Test the full redirect, callback, webhook, order-status, and canonical-email path in a non-production environment first.
+5. Do not delete the Bank Transfer implementation when re-enabling another method unless the business explicitly retires it.
+
+## Payment email responsibilities
+
+Next.js sends only custom payment-related messages:
+
+- Customer order acknowledgment.
+- Customer awaiting-payment instructions for unpaid Bank Transfer orders.
+- Admin bank-transfer claim notification.
+
+WooCommerce + FluentSMTP sends canonical lifecycle messages. Next.js does not duplicate Processing, Completed, New Order, Cancelled, or Failed messages.
+
+Full email ownership is documented in [`EMAIL.md`](EMAIL.md). Webhook setup and order lifecycle are documented in [`ORDERS.md`](ORDERS.md).

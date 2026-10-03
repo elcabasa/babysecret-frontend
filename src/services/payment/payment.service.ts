@@ -4,7 +4,7 @@ import type {
   PaymentProvider,
   PaymentVerificationResult,
 } from "@/services/payment/payment.types";
-import { BANK_DETAILS } from "@/config/bank";
+import { getBankDetails } from "@/config/bank";
 
 class DemoPaymentProvider implements PaymentProvider {
   async initializePayment(input: {
@@ -99,12 +99,23 @@ class PaystackPaymentProvider implements PaymentProvider {
 
     const result = await response.json();
 
+    const verified =
+      response.ok &&
+      result.status === true &&
+      result.data?.status === "success";
+
     return {
-      verified:
-        response.ok &&
-        result.status === true &&
-        result.data?.status === "success",
+      verified,
       reference,
+      // Paystack reports minor units (kobo for NGN).
+      amount:
+        typeof result.data?.amount === "number"
+          ? result.data.amount / 100
+          : undefined,
+      currency:
+        typeof result.data?.currency === "string"
+          ? result.data.currency
+          : undefined,
     };
   }
 }
@@ -200,6 +211,14 @@ class FlutterwavePaymentProvider implements PaymentProvider {
     return {
       verified,
       reference,
+      amount:
+        typeof result.data?.amount === "number"
+          ? result.data.amount
+          : Number(result.data?.amount) || undefined,
+      currency:
+        typeof result.data?.currency === "string"
+          ? result.data.currency
+          : undefined,
     };
   }
 }
@@ -224,10 +243,46 @@ export function getPaymentProvider(
   return new DemoPaymentProvider();
 }
 
+/**
+ * Authoritative payment sufficiency check. Every automatic confirmation path
+ * (callback verification, webhooks) must pass through here before an order
+ * may be marked paid:
+ *
+ * - provider reports success (`verified`)
+ * - provider reference matches the order's payment reference
+ * - currency matches the store currency (NGN)
+ * - provider-reported amount covers the WooCommerce order total
+ *
+ * Amounts come from the provider's verify API, never the browser. Bank
+ * transfer has no automatic path and can never satisfy this check.
+ */
+export function isSufficientPayment(input: {
+  verification: PaymentVerificationResult;
+  expectedReference: string;
+  orderTotal: number;
+  orderCurrency?: string;
+}): boolean {
+  const currency = (input.orderCurrency ?? "NGN").toUpperCase();
+  const paid = input.verification.amount;
+  const paidCurrency = (input.verification.currency ?? "").toUpperCase();
+
+  return (
+    input.verification.verified === true &&
+    input.verification.reference === input.expectedReference &&
+    paidCurrency === currency &&
+    typeof paid === "number" &&
+    Number.isFinite(paid) &&
+    Number.isFinite(input.orderTotal) &&
+    input.orderTotal > 0 &&
+    paid >= input.orderTotal
+  );
+}
+
 class BankTransferPaymentProvider implements PaymentProvider {
-  // Receiving-account details come from the single shared config
-  // (src/config/bank.ts) so server and client can never disagree.
-  // These are shown to customers, not API secrets.
+  // Receiving-account details are resolved from trusted server-only
+  // configuration (src/config/bank.ts → MONIEPOINT_*). These are shown to
+  // customers, not API secrets, but there is no hardcoded fallback: an
+  // unconfigured account must fail loudly rather than show a wrong number.
   async initializePayment(input: {
     email: string;
     amount: number;
@@ -236,13 +291,15 @@ class BankTransferPaymentProvider implements PaymentProvider {
     customerName?: string;
     phoneNumber?: string;
   }): Promise<PaymentInitializationResult> {
+    const bankDetails = getBankDetails();
+
     return {
       status: "awaiting_transfer",
       reference: input.reference,
       bankDetails: {
-        bankName: BANK_DETAILS.bankName,
-        accountName: BANK_DETAILS.accountName,
-        accountNumber: BANK_DETAILS.accountNumber,
+        bankName: bankDetails.bankName,
+        accountName: bankDetails.accountName,
+        accountNumber: bankDetails.accountNumber,
         amount: input.amount,
         reference: input.reference,
       },
