@@ -228,6 +228,9 @@ export function CheckoutForm() {
 
   const watched = useWatch({ control });
 
+  const isNigeria =
+    locations.length > 0 && watched.country?.trim().toLowerCase() === "nigeria";
+
   /*
    * Primitive snapshots of the watched fields. `watched` itself is a fresh
    * object identity on every render, so it must NEVER appear in an effect
@@ -335,6 +338,24 @@ export function CheckoutForm() {
   );
 
   /*
+   * Canonical city for the signature: when the picked/typed city matches a
+   * Terminal canonical city (case/punctuation-insensitive), the canonical
+   * spelling owns the key. "ojo" typed and "Ojo" picked are the same
+   * destination — one request, not two — and the key always carries the
+   * value Terminal actually quotes.
+   */
+  const canonicalCity = useMemo(() => {
+    const raw = qCity.trim();
+    if (!raw || !isNigeria) return raw;
+    const norm = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return (
+      terminalCities.find(
+        (city) => city.toLowerCase().replace(/[^a-z0-9]/g, "") === norm,
+      ) ?? raw
+    );
+  }, [qCity, isNigeria, terminalCities]);
+
+  /*
    * Stable quote-request key. The quote effect depends ONLY on this string
    * (plus fulfillment method and completeness): identical inputs → identical
    * key → no new request, no matter how often the component renders.
@@ -342,9 +363,10 @@ export function CheckoutForm() {
   const quoteRequestKey = useMemo(() => {
     if (fulfillmentMethod !== "delivery" || !addressComplete) return "";
     return JSON.stringify([
+      fulfillmentMethod,
       qCountry.trim(),
       qState.trim(),
-      qCity.trim(),
+      canonicalCity,
       qLga.trim(),
       qAddress.trim(),
       qApartment.trim(),
@@ -360,7 +382,7 @@ export function CheckoutForm() {
     addressComplete,
     qCountry,
     qState,
-    qCity,
+    canonicalCity,
     qLga,
     qAddress,
     qApartment,
@@ -377,9 +399,6 @@ export function CheckoutForm() {
   const requestedQuoteKeyRef = useRef("");
   const quoteAbortRef = useRef<AbortController | null>(null);
   const quoteIdRef = useRef(0);
-
-  const isNigeria =
-    locations.length > 0 && watched.country?.trim().toLowerCase() === "nigeria";
 
   const selectedState = watched.state ?? "";
 
