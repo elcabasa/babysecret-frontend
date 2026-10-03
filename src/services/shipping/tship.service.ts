@@ -10,6 +10,7 @@ import {
   terminalCountryCode,
   wrapAddressLines,
 } from "@/services/shipping/address-resolution";
+import { createHash } from "node:crypto";
 
 const apiBase =
   process.env.TERMINAL_API_BASE ?? "https://api.terminal.africa/v1";
@@ -68,8 +69,22 @@ type TshipRate = {
   carrier_rate_description?: string;
   delivery_time?: string;
   delivery_eta?: number;
+  delivery_date?: string;
   pickup_time?: string;
+  pickup_eta?: number;
   used?: boolean;
+  metadata?: {
+    distance?: unknown;
+    true_weight?: unknown;
+    score?: unknown;
+    pricing_tier?: unknown;
+    shipment_service_charge?: unknown;
+    insurance_fee?: unknown;
+    default_parcel?: {
+      parcel_total_weight?: unknown;
+      parcel_value?: unknown;
+    };
+  };
 };
 
 type TshipAddress = {
@@ -177,6 +192,53 @@ export class TerminalShipProvider implements ShippingProvider {
       cash_on_delivery: false,
     };
 
+    /*
+     * Development-only normalized fingerprint of the exact Terminal request.
+     * Two devices/browsers sending the same address + cart produce the same
+     * fingerprint, so mobile-vs-desktop divergences can be attributed to
+     * either a different request (different fingerprint) or Terminal itself
+     * (same fingerprint, different rates). The postcode is hashed — equality
+     * is comparable without storing customer PII in logs. Never logs keys.
+     */
+    if (process.env.NODE_ENV !== "production") {
+      const normalizedRequest = {
+        origin: {
+          city: payload.pickup_address.city,
+          state: payload.pickup_address.state,
+          country: payload.pickup_address.country,
+          zip: payload.pickup_address.zip,
+        },
+        destination: {
+          country: deliveryAddress.country,
+          state: deliveryAddress.state,
+          city: deliveryAddress.city,
+          zipHash: createHash("sha256")
+            .update(deliveryAddress.zip.trim(), "utf8")
+            .digest("hex")
+            .slice(0, 16),
+        },
+        items: parcelItems.map((item) => ({
+          name: item.name,
+          value: item.value,
+          weight: item.weight,
+          quantity: item.quantity,
+        })),
+        totalWeightKg: parcelItems.reduce(
+          (total, item) => total + item.weight * item.quantity,
+          0,
+        ),
+        weightUnit: "kg",
+        currency: "NGN",
+      };
+
+      console.info(
+        `[shipping] Quote request fingerprint ${createHash("sha256")
+          .update(JSON.stringify(normalizedRequest), "utf8")
+          .digest("hex")
+          .slice(0, 16)} ${JSON.stringify(normalizedRequest)}`,
+      );
+    }
+
     const response = await fetch(`${apiBase}/rates/shipment/quotes`, {
       method: "POST",
       headers: {
@@ -236,6 +298,42 @@ export class TerminalShipProvider implements ShippingProvider {
       state: resolved.address.state,
       ratesReturned: quotes.length,
     });
+
+    /*
+     * Development-only raw Terminal metadata per rate. Explicit allowlist —
+     * address payloads, user/account ids, and tracking internals inside
+     * `metadata` are never logged. Used to explain courier presence,
+     * pricing, and ETAs (e.g. why GIG appears for one request but not
+     * another) without touching the returned quotes.
+     */
+    if (process.env.NODE_ENV !== "production") {
+      for (const rate of rates) {
+        console.info(
+          `[shipping] Terminal raw rate ${JSON.stringify({
+            carrier_name: rate.carrier_name,
+            carrier_slug: rate.carrier_slug,
+            amount: rate.amount,
+            currency: rate.currency,
+            rate_id: rate.rate_id,
+            carrier_rate_description: rate.carrier_rate_description,
+            pickup_time: rate.pickup_time,
+            pickup_eta: rate.pickup_eta,
+            delivery_time: rate.delivery_time,
+            delivery_eta: rate.delivery_eta,
+            delivery_date: rate.delivery_date,
+            distance: rate.metadata?.distance,
+            true_weight: rate.metadata?.true_weight,
+            parcel_total_weight:
+              rate.metadata?.default_parcel?.parcel_total_weight,
+            parcel_value: rate.metadata?.default_parcel?.parcel_value,
+            score: rate.metadata?.score,
+            pricing_tier: rate.metadata?.pricing_tier,
+            shipment_service_charge: rate.metadata?.shipment_service_charge,
+            insurance_fee: rate.metadata?.insurance_fee,
+          })}`,
+        );
+      }
+    }
 
     return quotes;
   }
