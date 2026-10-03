@@ -352,8 +352,8 @@ export default function AwaitingPaymentPage({
                 </div>
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-sm text-[#424753]">Account Number</span>
-                  <div className="flex items-center justify-between gap-2 sm:justify-end">
-                    <span className="font-mono font-semibold tracking-wide text-[#142F54]">
+                  <div className="flex min-w-0 items-center justify-between gap-2 sm:justify-end">
+                    <span className="break-all font-mono text-lg font-semibold tracking-wide text-[#142F54]">
                       {accountNumber}
                     </span>
                     <CopyButton
