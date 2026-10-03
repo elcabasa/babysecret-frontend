@@ -69,7 +69,7 @@ export function AddToCartButton({
       }
       className={
         compact
-          ? "grid size-10 place-items-center rounded-full bg-[#3051a0] text-white transition hover:bg-[#005dbd] disabled:cursor-not-allowed disabled:bg-[#dbe7f3] disabled:text-[#334f6d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005dbd]"
+          ? "grid size-10 shrink-0 place-items-center rounded-full bg-[#3051a0] text-white transition hover:bg-[#005dbd] disabled:cursor-not-allowed disabled:bg-[#dbe7f3] disabled:text-[#334f6d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005dbd]"
           : "inline-flex items-center gap-2 rounded-full bg-[#005dbd] px-8 py-4 font-semibold text-white transition hover:bg-[#004d9c] disabled:cursor-not-allowed disabled:bg-[#dbe7f3] disabled:text-[#334f6d] disabled:hover:bg-[#dbe7f3] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005dbd]"
       }
     >
