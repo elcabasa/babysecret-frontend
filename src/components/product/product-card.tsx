@@ -9,49 +9,50 @@ export function ProductCard({ product }: { product: Product }) {
   const slug = product.slug ?? product.id;
 
   return (
-    <article className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white transition hover:shadow-md">
+    <article className="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-[#e5e7eb] bg-white transition hover:shadow-md sm:rounded-2xl">
       <div className="relative">
         <Link href={`/product/${slug}`} className="block">
-          <div className="relative h-[260px] overflow-hidden bg-[#f3f7fb] sm:h-[280px]">
+          <div className="relative h-36 overflow-hidden bg-[#f3f7fb] sm:h-48 lg:h-56">
             <Image
               src={product.image}
               alt={product.name}
               fill
-              className="object-cover transition duration-500 group-hover:scale-105"
+              sizes="(max-width: 639px) 46vw, (max-width: 1023px) 30vw, 260px"
+              className="object-contain p-2 transition duration-300 group-hover:scale-[1.03] sm:p-3"
               unoptimized
             />
             {product.badge && product.stockStatus !== "out-of-stock" && (
-              <span className="absolute left-3 top-3 z-10 rounded-full bg-[#005dbd] px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white shadow-sm">
+              <span className="absolute left-2 top-2 z-10 rounded-full bg-[#005dbd] px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-white shadow-sm sm:left-3 sm:top-3 sm:px-3 sm:text-[11px]">
                 {product.badge}
               </span>
             )}
           </div>
 
-          <div className="p-4 pb-0">
-            <p className="text-xs font-semibold uppercase tracking-wider text-[#005dbd]">
+          <div className="p-2.5 pb-0 sm:p-4 sm:pb-0">
+            <p className="truncate text-[9px] font-semibold uppercase tracking-wide text-[#005dbd] sm:text-xs sm:tracking-wider">
               {product.category}
             </p>
-            <h3 className="mt-1 truncate font-semibold text-[#102a43]">
+            <h3 className="mt-1 line-clamp-2 min-h-[2.25rem] text-xs font-semibold leading-snug text-[#102a43] sm:text-sm">
               {product.name}
             </h3>
-            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#62809e]">
+            <p className="mt-1 hidden line-clamp-2 text-xs leading-relaxed text-[#62809e] sm:block">
               {product.shortDescription || product.description}
             </p>
           </div>
         </Link>
 
-        <div className="absolute right-3 top-3 z-10">
+        <div className="absolute right-2 top-2 z-10 sm:right-3 sm:top-3">
           <WishlistButton product={product} />
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2 p-3 pt-3 sm:p-4 sm:pt-3">
-        <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-          <span className="text-base font-bold text-[#102a43]">
+      <div className="mt-auto flex items-center justify-between gap-1.5 p-2.5 pt-3 sm:gap-2 sm:p-4 sm:pt-3">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5">
+          <span className="text-xs font-bold text-[#102a43] sm:text-base">
             {formatPrice(product.price)}
           </span>
           {product.regularPrice && product.regularPrice > product.price && (
-            <span className="text-xs text-[#5a6b7e] line-through">
+            <span className="text-[10px] text-[#5a6b7e] line-through sm:text-xs">
               {formatPrice(product.regularPrice)}
             </span>
           )}
