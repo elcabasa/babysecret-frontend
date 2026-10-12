@@ -67,6 +67,7 @@ type ProductQuery = {
   order?: "asc" | "desc";
   orderby?: "date" | "price" | "popularity";
 };
+
 export interface ProductListResponse {
   products: Product[];
   page: number;
@@ -90,8 +91,8 @@ export async function getProducts(
 export async function getProductList(
   query: ProductQuery = {},
 ): Promise<ProductListResponse> {
-  const page = query.page ?? 1;
-  const perPage = query.perPage ?? 24;
+  const page = Math.max(1, query.page ?? 1);
+  const perPage = Math.min(100, Math.max(1, query.perPage ?? 24));
 
   const params = new URLSearchParams({
     page: String(page),
@@ -102,6 +103,23 @@ export async function getProductList(
 
   if (query.search?.trim()) {
     params.set("search", query.search.trim());
+  }
+
+  // The WooCommerce Store API expects a numeric category ID, not a slug.
+  // Apply the category filter at the API level so pagination and totals are
+  // calculated from the selected category rather than filtering one page
+  // of unrelated products in memory.
+  if (query.category?.trim()) {
+    const categories = await getProductCategories();
+    const selectedCategory = categories.find(
+      (item) => item.slug === query.category,
+    );
+
+    if (!selectedCategory) {
+      return { products: [], page, totalPages: 0, totalProducts: 0 };
+    }
+
+    params.set("category", String(selectedCategory.id));
   }
 
   const response = await fetch(`${storeApiUrl}/products?${params.toString()}`, {
@@ -115,22 +133,17 @@ export async function getProductList(
   }
 
   const products = (await response.json()) as WooProduct[];
-
   const mapped = products.map(mapWooProduct);
-
-  const filteredProducts = query.category
-    ? mapped.filter(
-        (product) => categorySlug(product.category) === query.category,
-      )
-    : mapped;
+  const totalPages = Number(response.headers.get("X-WP-TotalPages") ?? 1);
+  const totalProducts = Number(
+    response.headers.get("X-WP-Total") ?? mapped.length,
+  );
 
   return {
-    products: filteredProducts,
+    products: mapped,
     page,
-    totalPages: Number(response.headers.get("X-WP-TotalPages") ?? 1),
-    totalProducts: Number(
-      response.headers.get("X-WP-Total") ?? filteredProducts.length,
-    ),
+    totalPages,
+    totalProducts,
   };
 }
 
