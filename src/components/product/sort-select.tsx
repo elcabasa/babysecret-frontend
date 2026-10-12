@@ -9,12 +9,8 @@ interface SortSelectProps {
 export function SortSelect({ value }: SortSelectProps) {
   const router = useRouter();
 
-  function handleSortChange(
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) {
+  function handleSortChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const sort = event.target.value;
-
-    console.log("Selected sort:", sort);
 
     if (sort === "featured") {
       router.push("/shop");
@@ -34,12 +30,8 @@ export function SortSelect({ value }: SortSelectProps) {
         className="bg-transparent font-medium outline-none"
       >
         <option value="featured">Featured</option>
-        <option value="price-asc">
-          Price: Low to High
-        </option>
-        <option value="price-desc">
-          Price: High to Low
-        </option>
+        <option value="price-asc">Price: Low to High</option>
+        <option value="price-desc">Price: High to Low</option>
       </select>
     </div>
   );

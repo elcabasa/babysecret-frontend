@@ -1,13 +1,10 @@
-import Link from "next/link";
 import { Header } from "@/components/layout/header";
-import { ProductCard } from "@/components/product/product-card";
+import { ShopExplorer } from "@/components/product/shop-explorer";
 
 import {
   getProductCategories,
   getProductList,
 } from "@/services/product.service";
-
-function pageHref(page: number, search: string, sort: string) { const params = new URLSearchParams(); if (search) params.set("search", search); if (sort && sort !== "featured") params.set("sort", sort); params.set("page", String(page)); return `/shop?${params.toString()}`; }
 
 export default async function ShopPage({
   searchParams,
@@ -17,6 +14,7 @@ export default async function ShopPage({
     search?: string;
     q?: string;
     sort?: string;
+    category?: string;
   }>;
 }) {
   const values = await searchParams;
@@ -24,187 +22,37 @@ export default async function ShopPage({
   const page = Math.max(1, Number(values.page ?? 1) || 1);
   const search = values.search ?? values.q ?? "";
   const sort = values.sort ?? "featured";
+  const category = values.category ?? "";
 
   const orderby = sort.startsWith("price") ? "price" : "date";
 
- const [
-  { products, totalPages, totalProducts },
-  categories,
-] = await Promise.all([
-  getProductList({
-    page,
-    perPage: 24,
-    search,
-    orderby,
-    order: sort === "price-asc" ? "asc" : "desc",
-  }),
-  getProductCategories(),
-]);
+  const [{ products, totalPages, totalProducts }, categories] =
+    await Promise.all([
+      getProductList({
+        page,
+        perPage: 24,
+        search,
+        category,
+        orderby,
+        order: sort === "price-asc" ? "asc" : "desc",
+      }),
+      getProductCategories(),
+    ]);
 
   return (
     <main className="min-h-screen bg-[#f9fcff] px-6 pb-20 pt-36 sm:px-10">
       <Header />
 
       <div className="mx-auto max-w-[1200px]">
-        <div className="mb-10 flex flex-wrap items-end justify-between gap-5">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#3051a0]">
-              Catalog
-            </p>
-
-            <h1 className="mt-3 text-5xl font-medium">
-              Everyday care, made simple.
-            </h1>
-
-            <p className="mt-3 max-w-xl text-[#334f6d]">
-              {totalProducts} Baby Secret essentials for bath time,
-              moisturising, massage, and gentle clean-ups.
-            </p>
-          </div>
-
-         <form
-  action="/shop"
-  className="glass-control flex items-center gap-2 rounded-full px-4 py-2 text-sm"
->
-  <label htmlFor="sort">Sort by</label>
-
-  <select
-    id="sort"
-    name="sort"
-    defaultValue={sort}
-    className="bg-transparent font-medium outline-none"
-  >
-    <option value="featured">Featured</option>
-    <option value="price-asc">
-      Price: Low to High
-    </option>
-    <option value="price-desc">
-      Price: High to Low
-    </option>
-  </select>
-
-  <button
-    type="submit"
-    className="rounded-full bg-[#3051a0] px-4 py-1.5 text-sm font-medium text-white"
-  >
-    Apply
-  </button>
-</form>
-        </div>
-
-        <form className="glass-panel mb-8 flex max-w-xl gap-2 rounded-2xl p-2">
-          <label htmlFor="shop-search" className="sr-only">
-            Search products
-          </label>
-
-          <input
-            id="shop-search"
-            name="search"
-            defaultValue={search}
-            placeholder="Search products"
-            className="min-w-0 flex-1 bg-transparent px-3 py-2 outline-none"
-          />
-
-          <button className="rounded-full bg-[#3051a0] px-5 py-2 text-sm font-semibold text-white">
-            Search
-          </button>
-        </form>
-
-        <div className="mb-8 flex flex-wrap gap-2">
-          <Link
-            href="/shop"
-            className="glass-control rounded-full px-4 py-2 text-sm"
-          >
-            All products
-          </Link>
-
-          {categories.map((category) => (
-            <Link
-              key={category.id}
-              href={`/shop/${category.slug}`}
-              className="glass-control rounded-full px-4 py-2 text-sm transition hover:bg-white"
-            >
-              {category.name}
-            </Link>
-          ))}
-        </div>
-
-        {products.length ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        ) : (
-          <div className="glass-panel rounded-2xl p-8">
-            <h2 className="text-xl font-semibold">
-              No products found
-              {search ? ` for “${search}”` : ""}
-            </h2>
-
-            <p className="mt-2 text-[#334f6d]">
-              Try another search or browse a category.
-            </p>
-
-            <Link
-              href="/shop"
-              className="mt-5 inline-block font-semibold text-[#3051a0]"
-            >
-              Clear filters
-            </Link>
-          </div>
-        )}
-
-        <nav
-          aria-label="Product pagination"
-          className="mt-12 flex flex-wrap items-center justify-center gap-2"
-        >
-          <Link
-            aria-disabled={page <= 1}
-            className={`rounded-full px-4 py-2 text-sm ${
-              page <= 1
-                ? "pointer-events-none opacity-40"
-                : "glass-control"
-            }`}
-            href={pageHref(page - 1, search, sort)}
-          >
-            Previous
-          </Link>
-
-          {Array.from(
-            { length: Math.min(totalPages, 5) },
-            (_, index) => {
-              const number = index + 1;
-
-              return (
-                <Link
-                  key={number}
-                  aria-current={number === page ? "page" : undefined}
-                  className={`rounded-full px-4 py-2 text-sm ${
-                    number === page
-                      ? "bg-[#3051a0] text-white"
-                      : "glass-control"
-                  }`}
-                  href={pageHref(number, search, sort)}
-                >
-                  {number}
-                </Link>
-              );
-            }
-          )}
-
-          <Link
-            aria-disabled={page >= totalPages}
-            className={`rounded-full px-4 py-2 text-sm ${
-              page >= totalPages
-                ? "pointer-events-none opacity-40"
-                : "glass-control"
-            }`}
-            href={pageHref(page + 1, search, sort)}
-          >
-            Next
-          </Link>
-        </nav>
+        <ShopExplorer
+          categories={categories}
+          initialProducts={products}
+          initialTotalPages={totalPages}
+          initialTotalProducts={totalProducts}
+          initialSearch={search}
+          initialSort={sort}
+          initialCategory={category}
+        />
       </div>
     </main>
   );
