@@ -2,7 +2,7 @@ export const siteConfig = {
   name: "Baby Secret",
   url: "https://babysecret-frontend.vercel.app",
   phone: "+2347071610793",
-  displayPhone: "(+234) 707-161-0793",
+  displayPhone: "07071610793 (+2347071610793)",
   email: "hello@babysecret.com",
   tagline: "Gentle care for every little moment.",
   primaryMarket: "Nigeria",
