@@ -44,19 +44,19 @@ export function FulfillmentMethodSelector({ state }: { state: string }) {
   ];
 
   return (
-    <section className="sm:col-span-2" aria-labelledby="fulfillment-heading">
+    <section className="w-full min-w-0" aria-labelledby="fulfillment-heading">
       <div className="flex items-start gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#e7effc] text-[#005dbd]">
           {isLagos ? <MapPin className="size-5" /> : <Truck className="size-5" />}
         </span>
         <div>
           <h3 id="fulfillment-heading" className="text-base font-semibold text-slate-900">
-            {isLagos ? "How would you like to receive your order?" : "Delivery method"}
+            How would you like to receive your order?
           </h3>
           <p className="mt-1 text-sm leading-5 text-slate-600">
             {isLagos
-              ? "For Lagos orders, choose free pickup or instant delivery."
-              : "Waybill delivery is available outside Lagos."}
+              ? "Choose one option below: free pickup or instant delivery."
+              : "Waybill delivery is available for addresses outside Lagos."}
           </p>
         </div>
       </div>
