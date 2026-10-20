@@ -20,7 +20,7 @@ export function FormField<T extends FieldValues>({
 }: FormFieldProps<T>) {
   return (
     <label
-      className={`grid gap-2 text-sm ${wide ? "col-span-2" : ""}`}
+      className={`grid gap-2 text-sm ${wide ? "sm:col-span-2" : ""}`}
       htmlFor={name}
     >
       {label}
