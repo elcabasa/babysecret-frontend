@@ -12,13 +12,13 @@ export function ProductCard({ product }: { product: Product }) {
     <article className="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-[#e5e7eb] bg-white transition hover:shadow-md sm:rounded-2xl">
       <div className="relative">
         <Link href={`/product/${slug}`} className="block">
-          <div className="relative h-36 overflow-hidden bg-[#f3f7fb] sm:h-48 lg:h-56">
+          <div className="relative h-44 overflow-hidden bg-[#f3f7fb] sm:h-48 lg:h-56">
             <Image
               src={product.image}
               alt={product.name}
               fill
               sizes="(max-width: 639px) 46vw, (max-width: 1023px) 30vw, 260px"
-              className="object-contain p-2 transition duration-300 group-hover:scale-[1.03] sm:p-3"
+              className="object-contain p-1 transition duration-300 group-hover:scale-[1.03] sm:p-3"
               unoptimized
             />
             {product.badge && product.stockStatus !== "out-of-stock" && (
