@@ -127,13 +127,17 @@ export function DeliveryMethods({ state }: { state: string }) {
         <div className="mt-3 flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
           <Info className="mt-0.5 size-5 shrink-0 text-amber-700" />
           <div className="text-sm leading-5 text-amber-950">
-            <p className="font-semibold">Dispatch fee is not included in your order total</p>
+            <p className="font-semibold">Dispatch fee is paid separately</p>
             <p className="mt-1">
-              The fee depends on the dispatch rider&apos;s cost for your delivery location. We&apos;ll confirm the amount with you, and you pay the dispatch rider directly.
+              The fee depends on your delivery location. We&apos;ll confirm it with you, and you pay the rider directly.
             </p>
           </div>
         </div>
-      ) : null}
+      ) : (
+        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-5 text-slate-600">
+          The ₦4,000 waybill fee is included in your order total. Orders worth over ₦100,000 may incur extra waybill charges depending on parcel size or volume.
+        </div>
+      )}
     </section>
   );
 }
