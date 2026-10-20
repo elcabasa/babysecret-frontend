@@ -9,13 +9,7 @@ import type { DeliveryQuote } from "@/types/shipping";
 
 const WAYBILL_FEE = 4000;
 
-export function DeliveryMethods({
-  state,
-  subtotal,
-}: {
-  state: string;
-  subtotal: number;
-}) {
+export function DeliveryMethods({ state }: { state: string }) {
   const method = useFulfillmentStore((store) => store.method);
   const quotes = useDeliveryStore((store) => store.quotes);
   const selectedRateId = useDeliveryStore((store) => store.selectedRateId);
@@ -138,14 +132,6 @@ export function DeliveryMethods({
               The fee depends on the dispatch rider&apos;s cost for your delivery location. We&apos;ll confirm the amount with you, and you pay the dispatch rider directly.
             </p>
           </div>
-        </div>
-      ) : state.trim() ? (
-        <div className="mt-3 flex gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <Info className="mt-0.5 size-5 shrink-0 text-slate-500" />
-          <p className="text-sm leading-5 text-slate-600">
-            Waybill delivery costs {formatPrice(WAYBILL_FEE)}. Orders above ₦100,000 may incur additional charges depending on the parcel&apos;s size or volume.
-            {subtotal > 100000 ? " Your current order is above ₦100,000, so an additional charge may apply." : ""}
-          </p>
         </div>
       ) : null}
     </section>
