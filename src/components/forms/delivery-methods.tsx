@@ -48,15 +48,18 @@ export function DeliveryMethods({ state }: { state: string }) {
   if (method !== "delivery") return null;
 
   return (
-    <section className="sm:col-span-2" aria-labelledby="delivery-method-heading">
+    <section className="w-full min-w-0" aria-labelledby="delivery-method-heading">
       <div className="flex items-start gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#e7effc] text-[#005dbd]">
           {isLagos ? <Zap className="size-5" /> : <Truck className="size-5" />}
         </span>
         <div>
           <h3 id="delivery-method-heading" className="text-base font-semibold text-slate-900">
-            {isLagos ? "Delivery within Lagos" : "Delivery outside Lagos"}
+            Delivery option details
           </h3>
+          <p className="mt-1 text-sm font-medium text-slate-700">
+            {isLagos ? "Instant delivery within Lagos" : "Waybill delivery outside Lagos"}
+          </p>
           <p className="mt-1 text-sm leading-5 text-slate-600">
             {isLagos
               ? "Get your order delivered by a local dispatch rider."
