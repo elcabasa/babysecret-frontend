@@ -568,13 +568,9 @@ export function CheckoutForm() {
 
       <div className="col-span-2"><FulfillmentMethodSelector state={qState} /></div>
 
-      {fulfillmentMethod === "delivery" ? (
-        <>
-<DeliveryMethods state={qState} />
-        </>
-      ) : (
-        <PickupLocations />
-      )}
+      <div className="col-span-2">
+        {fulfillmentMethod === "delivery" ? <DeliveryMethods state={qState} /> : <PickupLocations />}
+      </div>
 
       <div className="col-span-2">
         <h3 className="text-sm font-semibold">Payment method</h3>
