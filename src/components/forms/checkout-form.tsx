@@ -119,8 +119,7 @@ const schema = z
     requireText(ctx, data.state, "state", 2, "Enter your state");
     requireText(ctx, data.city, "city", 2, "Enter your city");
     requireText(ctx, data.address, "address", 5, "Enter your delivery address");
-    // Terminal validates and persists the destination postcode — it must come
-    // from the customer, never invented.
+    // Postal/ZIP code is optional for the current waybill and instant-delivery methods.
   });
 
 type FormValues = z.infer<typeof schema>;
@@ -136,8 +135,6 @@ export function CheckoutForm() {
   const status = useDeliveryStore((state) => state.status);
 
   const setQuotes = useDeliveryStore((state) => state.setQuotes);
-  const setStatus = useDeliveryStore((state) => state.setStatus);
-  const setError = useDeliveryStore((state) => state.setError);
   const resetDelivery = useDeliveryStore((state) => state.reset);
 
   const fulfillmentMethod = useFulfillmentStore((state) => state.method);
@@ -152,13 +149,6 @@ export function CheckoutForm() {
   const [cartIssues, setCartIssues] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
-  // Canonical Terminal Africa cities for the selected Nigerian state. The
-  // shipping City field offers ONLY these — never the LGA dataset — so the
-  // quoted city is always Terminal-accepted.
-  const [terminalCities, setTerminalCities] = useState<string[]>([]);
-  const [citiesLoading, setCitiesLoading] = useState(false);
-  const [citiesError, setCitiesError] = useState("");
-  const [assistanceOpen, setAssistanceOpen] = useState(false);
 
   const {
     register,
@@ -247,53 +237,6 @@ export function CheckoutForm() {
   const qApartment = watched.apartment ?? "";
   const qZip = watched.zip ?? "";
 
-  // Assistance requests reuse the checkout contact/address fields and the
-  // cart's product ids — never prices or weights. Memoized so the assistance
-  // form only sees stable values.
-  const assistanceInitialValues = useMemo(
-    () => ({
-      firstName: watched.firstName ?? "",
-      lastName: watched.lastName ?? "",
-      email: watched.email ?? "",
-      phone: watched.phone ?? "",
-      state: watched.state ?? "",
-      city: watched.city ?? "",
-      address: watched.address ?? "",
-      apartment: watched.apartment ?? "",
-      country: watched.country ?? "Nigeria",
-    }),
-    [
-      watched.firstName,
-      watched.lastName,
-      watched.email,
-      watched.phone,
-      watched.state,
-      watched.city,
-      watched.address,
-      watched.apartment,
-      watched.country,
-    ],
-  );
-
-  const assistanceItems = useMemo(
-    () =>
-      items.map((item) => ({
-        productId: item.productId,
-        ...(item.variantId ? { variantId: item.variantId } : {}),
-        name: item.name,
-        quantity: item.quantity,
-      })),
-    [items],
-  );
-
-  // The assistance form only makes sense while delivery is selected and no
-  // automatic rate is available. Derived (not synced in an effect) so a
-  // method switch or a fresh quote naturally hides it without extra renders.
-  const showAssistance =
-    assistanceOpen &&
-    fulfillmentMethod === "delivery" &&
-    (status === "unavailable" || status === "error");
-
   const addressComplete = useMemo(
     () =>
       Boolean(
@@ -304,7 +247,7 @@ export function CheckoutForm() {
         qCountry.trim() &&
         qState.trim() &&
         qCity.trim() &&
-        qAddress.trim() &&
+        qAddress.trim()
       ),
     [
       qFirstName,
@@ -644,19 +587,7 @@ export function CheckoutForm() {
       // touches state inside its async callbacks.
       setValue("city", "", { shouldValidate: true });
       setValue("lga", "", { shouldValidate: false });
-      setTerminalCities([]);
-      setCitiesError("");
-      setCitiesLoading(Boolean(value.trim()));
     }
-  };
-
-  const selectCity = (value: string) => {
-    setValue("city", value, { shouldValidate: true });
-  };
-
-  const selectLga = (value: string) => {
-    // Informational only — never replaces the Terminal delivery city.
-    setValue("lga", value, { shouldValidate: false });
   };
 
   return (
@@ -730,31 +661,14 @@ export function CheckoutForm() {
             error={errors.city}
           />
 
-          {isNigeria && citiesError ? (
-            <p className="text-xs text-red-700 sm:col-span-2" role="alert">
-              {citiesError}
-            </p>
-          ) : null}
-
-          {isNigeria &&
-          !citiesLoading &&
-          !citiesError &&
-          selectedState.trim() &&
-          terminalCities.length === 0 ? (
-            <p className="text-xs text-[#334f6d] sm:col-span-2" role="status">
-              No delivery areas found for this state. You can still pick up
-              your order for free or request delivery assistance below.
-            </p>
-          ) : null}
-
           {isNigeria ? (
             <FormSelectField
               name="lga"
               label="LGA / Area (optional)"
-              hint="Your local area — for the address only, not the delivery calculation."
+              hint="Your local area."
               options={lgaOptions}
               value={watched.lga ?? ""}
-              onChange={selectLga}
+              onChange={(value) => setValue("lga", value, { shouldValidate: false })}
             />
           ) : null}
 
@@ -788,12 +702,6 @@ export function CheckoutForm() {
       {fulfillmentMethod === "delivery" ? (
         <>
           <DeliveryMethods state={qState} subtotal={items.reduce((sum, item) => sum + item.price * item.quantity, 0)} />
-          <DeliveryAssistanceModal
-            open={showAssistance}
-            initialValues={assistanceInitialValues}
-            items={assistanceItems}
-            onClose={() => setAssistanceOpen(false)}
-          />
         </>
       ) : (
         <PickupLocations />
