@@ -271,18 +271,8 @@ export function CheckoutForm() {
   );
 
   /*
-   * Request Terminal Africa quotes for delivery orders only.
-   *
-   * Loop-safety contract (do not regress):
-   * - The ONLY reactive dependency is the stable `quoteRequestKey` string
-   *   (plus method/completeness flags). Store updates made below
-   *   (setStatus/setQuotes/setError/reset) never change the key, so the
-   *   effect cannot retrigger itself.
-   * - Pickup never quotes and never touches Terminal loading state.
-   * - A changed key invalidates the previous quote immediately, so a stale
-   *   rate is never selectable for a new address.
-   * - Debounced (650ms), abortable, and only the latest request may write
-   *   state — a superseded response is dropped, never applied.
+   * Select the fixed delivery option for the customer's state. Fees are
+   * validated again by the checkout API, so browser state cannot set pricing.
    */
   useEffect(() => {
     if (fulfillmentMethod !== "delivery") {
