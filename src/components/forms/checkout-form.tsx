@@ -230,6 +230,7 @@ export function CheckoutForm() {
   const qPhone = watched.phone ?? "";
   const qCountry = watched.country ?? "";
   const qState = watched.state ?? "";
+  const qCity = watched.city ?? "";
   const qAddress = watched.address ?? "";
 
   const addressComplete = useMemo(
