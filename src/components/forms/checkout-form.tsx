@@ -1,7 +1,7 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { useCartStore } from "@/store/cart.store";
@@ -11,7 +11,6 @@ import type { CheckoutCustomer, FulfillmentMethod } from "@/types/order";
 import type { DeliveryQuote } from "@/types/shipping";
 import type { PickupLocationSummary } from "@/config/pickup";
 import { CartIssuesAlert } from "@/components/forms/cart-issues-alert";
-import { DeliveryAssistanceModal } from "@/components/forms/delivery-assistance-modal";
 import { DeliveryMethods } from "@/components/forms/delivery-methods";
 import { FulfillmentMethodSelector } from "@/components/forms/fulfillment-method-selector";
 import { PickupLocations } from "@/components/forms/pickup-locations";
@@ -119,9 +118,7 @@ const schema = z
     requireText(ctx, data.state, "state", 2, "Enter your state");
     requireText(ctx, data.city, "city", 2, "Enter your city");
     requireText(ctx, data.address, "address", 5, "Enter your delivery address");
-    // Terminal validates and persists the destination postcode — it must come
-    // from the customer, never invented.
-    requireText(ctx, data.zip, "zip", 3, "Enter your postal/ZIP code");
+    // Postal/ZIP code is optional for the current waybill and instant-delivery methods.
   });
 
 type FormValues = z.infer<typeof schema>;
@@ -137,8 +134,6 @@ export function CheckoutForm() {
   const status = useDeliveryStore((state) => state.status);
 
   const setQuotes = useDeliveryStore((state) => state.setQuotes);
-  const setStatus = useDeliveryStore((state) => state.setStatus);
-  const setError = useDeliveryStore((state) => state.setError);
   const resetDelivery = useDeliveryStore((state) => state.reset);
 
   const fulfillmentMethod = useFulfillmentStore((state) => state.method);
@@ -153,13 +148,6 @@ export function CheckoutForm() {
   const [cartIssues, setCartIssues] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
-  // Canonical Terminal Africa cities for the selected Nigerian state. The
-  // shipping City field offers ONLY these — never the LGA dataset — so the
-  // quoted city is always Terminal-accepted.
-  const [terminalCities, setTerminalCities] = useState<string[]>([]);
-  const [citiesLoading, setCitiesLoading] = useState(false);
-  const [citiesError, setCitiesError] = useState("");
-  const [assistanceOpen, setAssistanceOpen] = useState(false);
 
   const {
     register,
@@ -242,58 +230,7 @@ export function CheckoutForm() {
   const qPhone = watched.phone ?? "";
   const qCountry = watched.country ?? "";
   const qState = watched.state ?? "";
-  const qCity = watched.city ?? "";
-  const qLga = watched.lga ?? "";
   const qAddress = watched.address ?? "";
-  const qApartment = watched.apartment ?? "";
-  const qZip = watched.zip ?? "";
-
-  // Assistance requests reuse the checkout contact/address fields and the
-  // cart's product ids — never prices or weights. Memoized so the assistance
-  // form only sees stable values.
-  const assistanceInitialValues = useMemo(
-    () => ({
-      firstName: watched.firstName ?? "",
-      lastName: watched.lastName ?? "",
-      email: watched.email ?? "",
-      phone: watched.phone ?? "",
-      state: watched.state ?? "",
-      city: watched.city ?? "",
-      address: watched.address ?? "",
-      apartment: watched.apartment ?? "",
-      country: watched.country ?? "Nigeria",
-    }),
-    [
-      watched.firstName,
-      watched.lastName,
-      watched.email,
-      watched.phone,
-      watched.state,
-      watched.city,
-      watched.address,
-      watched.apartment,
-      watched.country,
-    ],
-  );
-
-  const assistanceItems = useMemo(
-    () =>
-      items.map((item) => ({
-        productId: item.productId,
-        ...(item.variantId ? { variantId: item.variantId } : {}),
-        name: item.name,
-        quantity: item.quantity,
-      })),
-    [items],
-  );
-
-  // The assistance form only makes sense while delivery is selected and no
-  // automatic rate is available. Derived (not synced in an effect) so a
-  // method switch or a fresh quote naturally hides it without extra renders.
-  const showAssistance =
-    assistanceOpen &&
-    fulfillmentMethod === "delivery" &&
-    (status === "unavailable" || status === "error");
 
   const addressComplete = useMemo(
     () =>
@@ -305,8 +242,7 @@ export function CheckoutForm() {
         qCountry.trim() &&
         qState.trim() &&
         qCity.trim() &&
-        qAddress.trim() &&
-        qZip.trim().length >= 3,
+        qAddress.trim()
       ),
     [
       qFirstName,
@@ -317,129 +253,8 @@ export function CheckoutForm() {
       qState,
       qCity,
       qAddress,
-      qZip,
     ],
   );
-
-  /*
-   * Stable cart signature: a quantity/product change alters parcel
-   * weight/items and must re-quote, but an unrelated render must not.
-   * The raw `items` array reference is never a dependency.
-   */
-  const cartSignature = useMemo(
-    () =>
-      items
-        .map(
-          (item) =>
-            `${item.productId}:${item.variantId ?? ""}x${item.quantity}`,
-        )
-        .join("|"),
-    [items],
-  );
-
-  /*
-   * Canonical city for the signature: when the picked/typed city matches a
-   * Terminal canonical city (case/punctuation-insensitive), the canonical
-   * spelling owns the key. "ojo" typed and "Ojo" picked are the same
-   * destination — one request, not two — and the key always carries the
-   * value Terminal actually quotes.
-   */
-  const canonicalCity = useMemo(() => {
-    const raw = qCity.trim();
-    if (!raw || !isNigeria) return raw;
-    const norm = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
-    return (
-      terminalCities.find(
-        (city) => city.toLowerCase().replace(/[^a-z0-9]/g, "") === norm,
-      ) ?? raw
-    );
-  }, [qCity, isNigeria, terminalCities]);
-
-  /*
-   * Stable quote-request key. The quote effect depends ONLY on this string
-   * (plus fulfillment method and completeness): identical inputs → identical
-   * key → no new request, no matter how often the component renders.
-   */
-  const quoteRequestKey = useMemo(() => {
-    if (fulfillmentMethod !== "delivery" || !addressComplete) return "";
-    return JSON.stringify([
-      fulfillmentMethod,
-      qCountry.trim(),
-      qState.trim(),
-      canonicalCity,
-      qLga.trim(),
-      qAddress.trim(),
-      qApartment.trim(),
-      qZip.trim(),
-      qFirstName.trim(),
-      qLastName.trim(),
-      qEmail.trim(),
-      qPhone.trim(),
-      cartSignature,
-    ]);
-  }, [
-    fulfillmentMethod,
-    addressComplete,
-    qCountry,
-    qState,
-    canonicalCity,
-    qLga,
-    qAddress,
-    qApartment,
-    qZip,
-    qFirstName,
-    qLastName,
-    qEmail,
-    qPhone,
-    cartSignature,
-  ]);
-
-  // Tracks the key already requested (or in flight) and the means to cancel
-  // it. Refs — never dependencies — so bookkeeping can't retrigger fetching.
-  const requestedQuoteKeyRef = useRef("");
-  const quoteAbortRef = useRef<AbortController | null>(null);
-  const quoteIdRef = useRef(0);
-
-  const selectedState = watched.state ?? "";
-
-  /*
-   * Load Terminal Africa's canonical delivery cities for the selected
-   * Nigerian state. Kept separate from the LGA dataset on purpose: mixing
-   * the two lists is what sent LGAs like "Eti-Osa" to Terminal as cities.
-   */
-  useEffect(() => {
-    if (!isNigeria || !selectedState.trim()) {
-      // Nothing to load. Loading flags are managed in the state select
-      // handler and the fetch callbacks below — never synchronously here.
-      return;
-    }
-
-    let active = true;
-
-    fetch(`/api/terminal-cities?state=${encodeURIComponent(selectedState.trim())}`)
-      .then((response) => response.json())
-      .then((data: { success?: boolean; cities?: string[] }) => {
-        if (!active) return;
-        if (data.success) {
-          setTerminalCities(data.cities ?? []);
-        } else {
-          setTerminalCities([]);
-          setCitiesError("Could not load delivery areas. Please try again.");
-        }
-      })
-      .catch(() => {
-        if (!active) return;
-        setTerminalCities([]);
-        setCitiesError("Could not load delivery areas. Please try again.");
-      })
-      .finally(() => {
-        if (active) setCitiesLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [isNigeria, selectedState]);
 
   const stateOptions = useMemo(
     () => locations.map((location) => location.state),
@@ -456,144 +271,39 @@ export function CheckoutForm() {
   );
 
   /*
-   * Request Terminal Africa quotes for delivery orders only.
-   *
-   * Loop-safety contract (do not regress):
-   * - The ONLY reactive dependency is the stable `quoteRequestKey` string
-   *   (plus method/completeness flags). Store updates made below
-   *   (setStatus/setQuotes/setError/reset) never change the key, so the
-   *   effect cannot retrigger itself.
-   * - Pickup never quotes and never touches Terminal loading state.
-   * - A changed key invalidates the previous quote immediately, so a stale
-   *   rate is never selectable for a new address.
-   * - Debounced (650ms), abortable, and only the latest request may write
-   *   state — a superseded response is dropped, never applied.
+   * Select the fixed delivery option for the customer's state. Fees are
+   * validated again by the checkout API, so browser state cannot set pricing.
    */
   useEffect(() => {
     if (fulfillmentMethod !== "delivery") {
-      // Pickup: no courier involved — cancel anything pending and clear.
-      requestedQuoteKeyRef.current = "";
-      quoteAbortRef.current?.abort();
-      quoteAbortRef.current = null;
       resetDelivery();
       return;
     }
-
-    if (!addressComplete || !items.length) {
-      // Incomplete form: drop stale selection quietly (no loading flash).
-      if (requestedQuoteKeyRef.current !== "") {
-        requestedQuoteKeyRef.current = "";
-        quoteAbortRef.current?.abort();
-        quoteAbortRef.current = null;
-        resetDelivery();
-      }
+    if (!qState.trim() || !addressComplete || !items.length) {
+      resetDelivery();
       return;
     }
-
-    // Same meaningful inputs as the in-flight/completed request: nothing to do.
-    if (quoteRequestKey === requestedQuoteKeyRef.current) return;
-
-    requestedQuoteKeyRef.current = quoteRequestKey;
-    // Invalidate the previous quote before the new one arrives.
-    resetDelivery();
-
-    // Cancel the previous request if it is still running.
-    quoteAbortRef.current?.abort();
-    const controller = new AbortController();
-    quoteAbortRef.current = controller;
-    const requestId = ++quoteIdRef.current;
-
-    const timer = setTimeout(async () => {
-      if (process.env.NODE_ENV !== "production") {
-        // Non-sensitive: id + outcome only, never addresses or credentials.
-        console.info(`[quotes] QUOTE REQUEST START #${requestId}`);
-      }
-      setStatus("loading");
-
-      try {
-        const response = await fetch("/api/shipping/quotes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            firstName: qFirstName,
-            lastName: qLastName,
-            email: qEmail,
-            phone: qPhone,
-            country: qCountry,
-            state: qState,
-            city: qCity,
-            lga: qLga,
-            address: qAddress,
-            apartment: qApartment,
-            zip: qZip,
-            items: items.map((item) => ({
-              id: item.productId,
-              ...(item.variantId ? { variantId: item.variantId } : {}),
-              name: item.name,
-              price: item.price,
-              quantity: item.quantity,
-            })),
-          }),
-          signal: controller.signal,
-        });
-
-        const result = (await response.json()) as {
-          success?: boolean;
-          quotes?: DeliveryQuote[];
-          message?: string;
-        };
-
-        if (!response.ok || !result.success) {
-          throw new Error(result.message ?? "Could not estimate delivery.");
-        }
-
-        // A newer request has since started: drop this stale response.
-        if (quoteIdRef.current !== requestId) return;
-
-        setQuotes(result.quotes ?? []);
-        if (process.env.NODE_ENV !== "production") {
-          console.info(
-            `[quotes] QUOTE REQUEST COMPLETE #${requestId} quotes=${result.quotes?.length ?? 0}`,
-          );
-        }
-      } catch (quoteError) {
-        // Aborted/superseded: silence. Only the latest request may write.
-        if (
-          controller.signal.aborted ||
-          quoteIdRef.current !== requestId
-        ) {
-          return;
-        }
-        // Never surface provider internals (provider names, API errors) to
-        // customers — show a clear, friendly message instead.
-        console.error("Delivery quote error:", quoteError);
-        setError("We couldn't find an automatic delivery option for this address.");
-      }
-    }, 650);
-
-    return () => clearTimeout(timer);
-  }, [
-    fulfillmentMethod,
-    addressComplete,
-    quoteRequestKey,
-    items,
-    qFirstName,
-    qLastName,
-    qEmail,
-    qPhone,
-    qCountry,
-    qState,
-    qCity,
-    qLga,
-    qAddress,
-    qApartment,
-    qZip,
-    setQuotes,
-    setStatus,
-    setError,
-    resetDelivery,
-  ]);
-
+    const isLagos = qState.trim().toLowerCase() === "lagos";
+    setQuotes([
+      isLagos
+        ? {
+            rateId: "babysecret_instant",
+            carrierName: "Instant Delivery",
+            carrierSlug: "babysecret-instant",
+            service: "Dispatch fee paid directly to the rider",
+            amount: 0,
+            currency: "NGN",
+          }
+        : {
+            rateId: "babysecret_waybill",
+            carrierName: "Waybill Delivery",
+            carrierSlug: "babysecret-waybill",
+            service: "Standard waybill shipping",
+            amount: 4000,
+            currency: "NGN",
+          },
+    ]);
+  }, [fulfillmentMethod, qState, addressComplete, items.length, setQuotes, resetDelivery]);
   const onSubmit = async (data: FormValues) => {
     const fulfillmentMethod: FulfillmentMethod =
       data.fulfillmentMethod === "pickup" ? "pickup" : "delivery";
@@ -768,25 +478,9 @@ export function CheckoutForm() {
   const selectState = (value: string) => {
     setValue("state", value, { shouldValidate: true });
     if (value !== watched.state) {
-      // A new state means a new Terminal city list AND a new LGA list, so
-      // the previous selections (and their load error) are discarded here.
-      // The loading flag is armed here too; the fetch effect above only
-      // touches state inside its async callbacks.
       setValue("city", "", { shouldValidate: true });
       setValue("lga", "", { shouldValidate: false });
-      setTerminalCities([]);
-      setCitiesError("");
-      setCitiesLoading(Boolean(value.trim()));
     }
-  };
-
-  const selectCity = (value: string) => {
-    setValue("city", value, { shouldValidate: true });
-  };
-
-  const selectLga = (value: string) => {
-    // Informational only — never replaces the Terminal delivery city.
-    setValue("lga", value, { shouldValidate: false });
   };
 
   return (
@@ -853,56 +547,21 @@ export function CheckoutForm() {
             />
           )}
 
-          {isNigeria ? (
-            <FormSelectField
-              name="city"
-              label="City / Delivery Area"
-              hint="Used to calculate your delivery fee."
-              options={terminalCities}
-              value={watched.city ?? ""}
-              onChange={selectCity}
-              disabled={citiesLoading || (!citiesError && terminalCities.length === 0 && !selectedState)}
-              placeholder={
-                citiesLoading
-                  ? "Loading delivery areas…"
-                  : "Select city / delivery area"
-              }
-              error={errors.city}
-            />
-          ) : (
-            <FormField
-              name="city"
-              label="City"
-              register={register}
-              error={errors.city}
-            />
-          )}
-
-          {isNigeria && citiesError ? (
-            <p className="text-xs text-red-700 sm:col-span-2" role="alert">
-              {citiesError}
-            </p>
-          ) : null}
-
-          {isNigeria &&
-          !citiesLoading &&
-          !citiesError &&
-          selectedState.trim() &&
-          terminalCities.length === 0 ? (
-            <p className="text-xs text-[#334f6d] sm:col-span-2" role="status">
-              No delivery areas found for this state. You can still pick up
-              your order for free or request delivery assistance below.
-            </p>
-          ) : null}
+          <FormField
+            name="city"
+            label="City / Town"
+            register={register}
+            error={errors.city}
+          />
 
           {isNigeria ? (
             <FormSelectField
               name="lga"
               label="LGA / Area (optional)"
-              hint="Your local area — for the address only, not the delivery calculation."
+              hint="Your local area."
               options={lgaOptions}
               value={watched.lga ?? ""}
-              onChange={selectLga}
+              onChange={(value) => setValue("lga", value, { shouldValidate: false })}
             />
           ) : null}
 
@@ -931,17 +590,11 @@ export function CheckoutForm() {
         </>
       ) : null}
 
-      <FulfillmentMethodSelector />
+      <FulfillmentMethodSelector state={qState} />
 
       {fulfillmentMethod === "delivery" ? (
         <>
-          <DeliveryMethods onRequestAssistance={() => setAssistanceOpen(true)} />
-          <DeliveryAssistanceModal
-            open={showAssistance}
-            initialValues={assistanceInitialValues}
-            items={assistanceItems}
-            onClose={() => setAssistanceOpen(false)}
-          />
+          <DeliveryMethods state={qState} subtotal={items.reduce((sum, item) => sum + item.price * item.quantity, 0)} />
         </>
       ) : (
         <PickupLocations />

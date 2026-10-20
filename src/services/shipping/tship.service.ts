@@ -20,7 +20,7 @@ const pickupDefaults = {
   firstName: process.env.SHIPPING_PICKUP_FIRST_NAME ?? "Baby Secret",
   lastName: process.env.SHIPPING_PICKUP_LAST_NAME ?? "Store",
   email: process.env.SHIPPING_PICKUP_EMAIL ?? "delivery@babysecret.com",
-  phone: process.env.SHIPPING_PICKUP_PHONE ?? "+2348012345678",
+  phone: process.env.SHIPPING_PICKUP_PHONE ?? "+2347071610793",
   // Terminal origin: Flawless Plaza, Ojo, Lagos, NG, 102101. line1 stays short
   // because Terminal rejects line1 longer than 45 characters (see
   // wrapAddressLines); the full collection-point address lives in
@@ -46,7 +46,7 @@ function withPhonePlus(phone: string): string {
     return `+234${digits.slice(1)}`;
   }
   if (digits.length === 10) return `+234${digits}`;
-  return `+${digits || "2348012345678"}`;
+  return `+${digits || "2347071610793"}`;
 }
 
 async function parseJson(response: Response): Promise<Record<string, unknown>> {

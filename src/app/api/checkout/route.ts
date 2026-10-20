@@ -14,23 +14,11 @@ import {
   formatPickupAddress,
   getPickupLocation,
 } from "@/config/pickup";
-import {
-  getDeliveryQuotes,
-  getShippingProviderName,
-} from "@/services/shipping/shipping.service";
-import {
-  defaultPickupAddress,
-  countryToCode,
-} from "@/services/shipping/tship.service";
-import {
-  checkNigeriaTerminalCity,
-  isNigeriaCountry,
-} from "@/services/shipping/address-resolution";
+import { getShippingProviderName } from "@/services/shipping/shipping.service";
+import { countryToCode } from "@/services/shipping/tship.service";
+import { isNigeriaCountry } from "@/services/shipping/address-resolution";
 import { checkCartStock } from "@/lib/woo-stock";
-import {
-  DEFAULT_PARCEL_ITEM_WEIGHT_KG,
-  resolveParcelWeights,
-} from "@/services/shipping/weight.service";
+
 import type { CheckoutDelivery, FulfillmentMethod } from "@/types/order";
 
 /**
@@ -93,8 +81,8 @@ const checkoutSchema = z.object({
     .nullable()
     .optional(),
 }).superRefine((data, ctx) => {
-  // Delivery needs a complete destination: Terminal validates and quotes
-  // against it, and persisting address data requires a real postal code.
+  // Delivery needs a complete destination address. Postal/ZIP is optional
+  // for the current fixed-fee waybill and instant-dispatch methods.
   if ((data.fulfillmentMethod ?? "delivery") === "delivery") {
     const required: [string, string][] = [
       ["state", data.customer.state],
@@ -112,104 +100,10 @@ const checkoutSchema = z.object({
       }
     }
 
-    if (data.customer.zip.trim().length < 3) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["customer", "zip"],
-        message: "A postal/ZIP code is required for delivery.",
-      });
-    }
   }
 });
 
 type CheckoutCustomer = z.infer<typeof checkoutSchema>["customer"];
-type CheckoutItems = z.infer<typeof checkoutSchema>["items"];
-
-/**
- * Resolves the delivery address for Terminal Africa. The LGA rides along as
- * street-level context only — the Terminal city is always the canonical
- * City / Delivery Area the customer selected.
- */
-function toShippingAddress(customer: CheckoutCustomer) {
-  return {
-    firstName: customer.firstName,
-    lastName: customer.lastName,
-    email: customer.email,
-    phone: customer.phone,
-    line1: customer.address,
-    line2: [customer.apartment, customer.lga]
-      .map((part) => part?.trim() ?? "")
-      .filter(Boolean)
-      .join(", "),
-    city: customer.city,
-    state: customer.state,
-    country: customer.country,
-    zip: customer.zip,
-  };
-}
-
-async function verifyDeliveryQuote(
-  delivery: CheckoutDelivery,
-  customer: CheckoutCustomer,
-  items: CheckoutItems,
-): Promise<CheckoutDelivery | null> {
-  /*
-   * Re-resolve authoritative WooCommerce weights with the same helper used by
-   * `/api/shipping/quotes`. The checkout payload has no weight field, so the
-   * browser cannot override the value used for re-verification.
-   */
-  const resolvedWeights = await resolveParcelWeights(
-    items.map((item) => ({
-      productId: item.productId,
-      variantId: item.variantId,
-      quantity: item.quantity,
-    })),
-  );
-
-  console.info("[shipping] Re-verified parcel weights", {
-    items: resolvedWeights.items.map((item) => ({
-      productId: item.productId,
-      ...(item.variantId ? { variantId: item.variantId } : {}),
-      unitWeightKg: item.unitWeightKg,
-      quantity: item.quantity,
-      lineWeightKg: item.lineWeightKg,
-      source: item.source,
-    })),
-    totalParcelWeightKg: resolvedWeights.totalParcelWeightKg,
-  });
-
-  const parcelItems = items.map((item, index) => ({
-    id: item.productId,
-    name: item.name ?? item.productId,
-    value: (item.price ?? 0) * item.quantity,
-    weight:
-      resolvedWeights.items[index]?.unitWeightKg ??
-      DEFAULT_PARCEL_ITEM_WEIGHT_KG,
-    quantity: item.quantity,
-  }));
-
-  const quotes = await getDeliveryQuotes({
-    pickup: defaultPickupAddress(),
-    delivery: toShippingAddress(customer),
-    items: parcelItems,
-  });
-
-  const match = quotes.find(
-    (quote) =>
-      quote.carrierName === delivery.carrier &&
-      Math.abs(quote.amount - delivery.amount) <= 1 &&
-      (!delivery.service || quote.service === delivery.service),
-  );
-
-  if (!match) return null;
-
-  return {
-    rateId: match.rateId,
-    carrier: match.carrierName,
-    service: match.service,
-    amount: match.amount,
-  };
-}
 
 /**
  * Builds the order meta for a fulfillment method.
@@ -259,8 +153,9 @@ function buildOrderMeta(
   if (!delivery) return base;
 
   const provider = getShippingProviderName();
-  const prefix =
-    provider === "tship"
+  const prefix = delivery.rateId.startsWith("babysecret_")
+    ? "_babysecret_delivery"
+    : provider === "tship"
       ? "_babysecret_tship"
       : provider === "shipbubble"
         ? "_babysecret_shipbubble"
@@ -320,57 +215,60 @@ export async function POST(request: Request) {
 
     let delivery = parsed.data.delivery ?? null;
 
-    if (fulfillmentMethod === "delivery") {
-      /*
-       * Delivery keeps its existing contract: a Terminal Africa quote is
-       * re-verified server-side and checkout is rejected if it no longer holds.
-       * The city must additionally be a Terminal canonical city for Nigeria —
-       * an LGA sent as the city is rejected with a friendly message, using
-       * the same check as `/api/shipping/quotes`.
-       */
+    if (fulfillmentMethod === "pickup") {
+      if (customer.state.trim().toLowerCase() !== "lagos" || !isNigeriaCountry(customer.country)) {
+        return NextResponse.json(
+          { message: "Pickup is available for Lagos, Nigeria orders only." },
+          { status: 400 },
+        );
+      }
+      delivery = null;
+    } else {
       if (!delivery) {
         return NextResponse.json(
-          {
-            message:
-              "Please choose a delivery method before continuing, or switch to pickup.",
-          },
+          { message: "Please choose a delivery method before continuing." },
           { status: 409 },
         );
       }
-
-      if (isNigeriaCountry(customer.country)) {
-        const check = await checkNigeriaTerminalCity(
-          customer.state,
-          customer.city,
+      if (!isNigeriaCountry(customer.country)) {
+        return NextResponse.json(
+          { message: "Waybill and instant dispatch are currently available within Nigeria only." },
+          { status: 400 },
         );
-
-        if (check.status === "unsupported") {
+      }
+      const isLagos = customer.state.trim().toLowerCase() === "lagos";
+      if (delivery.rateId === "babysecret_waybill") {
+        if (isLagos) {
           return NextResponse.json(
-            {
-              message:
-                "Please select a City / Delivery Area from the list to calculate delivery.",
-            },
+            { message: "Waybill delivery is for destinations outside Lagos. Choose instant delivery for Lagos." },
             { status: 400 },
           );
         }
-      }
-
-      const verified = await verifyDeliveryQuote(delivery, customer, items);
-
-      if (!verified) {
+        delivery = {
+          rateId: "babysecret_waybill",
+          carrier: "Waybill Delivery",
+          service: "Standard waybill shipping",
+          amount: 4000,
+        };
+      } else if (delivery.rateId === "babysecret_instant") {
+        if (!isLagos) {
+          return NextResponse.json(
+            { message: "Instant delivery is available in Lagos only. Choose waybill delivery for other states." },
+            { status: 400 },
+          );
+        }
+        delivery = {
+          rateId: "babysecret_instant",
+          carrier: "Instant Delivery",
+          service: "Dispatch fee paid directly to the dispatch rider",
+          amount: 0,
+        };
+      } else {
         return NextResponse.json(
-          {
-            message:
-              "Your delivery estimate has changed. Please review your delivery options before continuing, or switch to pickup.",
-          },
-          { status: 409 },
+          { message: "That delivery method is no longer available. Please select a current option." },
+          { status: 400 },
         );
       }
-
-      delivery = verified;
-    } else {
-      // Pickup orders never require — or reference — a Terminal rate id.
-      delivery = null;
     }
 
     const pickup = pickupRequested
@@ -497,11 +395,15 @@ export async function POST(request: Request) {
           ? [
               {
                 method_id:
-                  getShippingProviderName() === "tship"
-                    ? "terminal_tship"
-                    : getShippingProviderName() === "shipbubble"
-                      ? "shipbubble_default"
-                      : delivery.rateId,
+                  delivery.rateId === "babysecret_waybill"
+                    ? "babysecret_waybill"
+                    : delivery.rateId === "babysecret_instant"
+                      ? "babysecret_instant"
+                      : getShippingProviderName() === "tship"
+                        ? "terminal_tship"
+                        : getShippingProviderName() === "shipbubble"
+                          ? "shipbubble_default"
+                          : delivery.rateId,
                 method_title: delivery.carrier,
                 total: String(delivery.amount),
               },
@@ -519,6 +421,12 @@ export async function POST(request: Request) {
     const customerNote = [
       fulfillmentMethod === "pickup" && pickup
         ? `Pickup collection: ${pickup.name} — ${pickup.address}`
+        : "",
+      delivery?.rateId === "babysecret_waybill"
+        ? "Delivery method: Waybill Delivery. Standard waybill fee: ₦4,000. Orders above ₦100,000 may incur additional fees due to the size or volume of goods."
+        : "",
+      delivery?.rateId === "babysecret_instant"
+        ? "Delivery method: Instant Delivery within Lagos. Dispatch fee is separate from the order total and must be paid directly to the dispatch rider."
         : "",
       customer.notes?.trim() ?? "",
     ]
