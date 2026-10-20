@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Info, MapPin, Package, Truck, Zap } from "lucide-react";
+import { Info, Package, Truck, Zap } from "lucide-react";
 import { useDeliveryStore } from "@/store/delivery.store";
 import { useFulfillmentStore } from "@/store/fulfillment.store";
 import { formatPrice } from "@/data/products";
