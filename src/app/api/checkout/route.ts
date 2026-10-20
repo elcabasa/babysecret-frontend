@@ -14,23 +14,11 @@ import {
   formatPickupAddress,
   getPickupLocation,
 } from "@/config/pickup";
-import {
-  getDeliveryQuotes,
-  getShippingProviderName,
-} from "@/services/shipping/shipping.service";
-import {
-  defaultPickupAddress,
-  countryToCode,
-} from "@/services/shipping/tship.service";
-import {
-  checkNigeriaTerminalCity,
-  isNigeriaCountry,
-} from "@/services/shipping/address-resolution";
+import { getShippingProviderName } from "@/services/shipping/shipping.service";
+import { countryToCode } from "@/services/shipping/tship.service";
+import { isNigeriaCountry } from "@/services/shipping/address-resolution";
 import { checkCartStock } from "@/lib/woo-stock";
-import {
-  DEFAULT_PARCEL_ITEM_WEIGHT_KG,
-  resolveParcelWeights,
-} from "@/services/shipping/weight.service";
+
 import type { CheckoutDelivery, FulfillmentMethod } from "@/types/order";
 
 /**
@@ -93,8 +81,8 @@ const checkoutSchema = z.object({
     .nullable()
     .optional(),
 }).superRefine((data, ctx) => {
-  // Delivery needs a complete destination: Terminal validates and quotes
-  // against it, and persisting address data requires a real postal code.
+  // Delivery needs a complete destination address. Postal/ZIP is optional
+  // for the current fixed-fee waybill and instant-dispatch methods.
   if ((data.fulfillmentMethod ?? "delivery") === "delivery") {
     const required: [string, string][] = [
       ["state", data.customer.state],
@@ -116,93 +104,6 @@ const checkoutSchema = z.object({
 });
 
 type CheckoutCustomer = z.infer<typeof checkoutSchema>["customer"];
-type CheckoutItems = z.infer<typeof checkoutSchema>["items"];
-
-/**
- * Resolves the delivery address for Terminal Africa. The LGA rides along as
- * street-level context only — the Terminal city is always the canonical
- * City / Delivery Area the customer selected.
- */
-function toShippingAddress(customer: CheckoutCustomer) {
-  return {
-    firstName: customer.firstName,
-    lastName: customer.lastName,
-    email: customer.email,
-    phone: customer.phone,
-    line1: customer.address,
-    line2: [customer.apartment, customer.lga]
-      .map((part) => part?.trim() ?? "")
-      .filter(Boolean)
-      .join(", "),
-    city: customer.city,
-    state: customer.state,
-    country: customer.country,
-    zip: customer.zip,
-  };
-}
-
-async function verifyDeliveryQuote(
-  delivery: CheckoutDelivery,
-  customer: CheckoutCustomer,
-  items: CheckoutItems,
-): Promise<CheckoutDelivery | null> {
-  /*
-   * Re-resolve authoritative WooCommerce weights with the same helper used by
-   * `/api/shipping/quotes`. The checkout payload has no weight field, so the
-   * browser cannot override the value used for re-verification.
-   */
-  const resolvedWeights = await resolveParcelWeights(
-    items.map((item) => ({
-      productId: item.productId,
-      variantId: item.variantId,
-      quantity: item.quantity,
-    })),
-  );
-
-  console.info("[shipping] Re-verified parcel weights", {
-    items: resolvedWeights.items.map((item) => ({
-      productId: item.productId,
-      ...(item.variantId ? { variantId: item.variantId } : {}),
-      unitWeightKg: item.unitWeightKg,
-      quantity: item.quantity,
-      lineWeightKg: item.lineWeightKg,
-      source: item.source,
-    })),
-    totalParcelWeightKg: resolvedWeights.totalParcelWeightKg,
-  });
-
-  const parcelItems = items.map((item, index) => ({
-    id: item.productId,
-    name: item.name ?? item.productId,
-    value: (item.price ?? 0) * item.quantity,
-    weight:
-      resolvedWeights.items[index]?.unitWeightKg ??
-      DEFAULT_PARCEL_ITEM_WEIGHT_KG,
-    quantity: item.quantity,
-  }));
-
-  const quotes = await getDeliveryQuotes({
-    pickup: defaultPickupAddress(),
-    delivery: toShippingAddress(customer),
-    items: parcelItems,
-  });
-
-  const match = quotes.find(
-    (quote) =>
-      quote.carrierName === delivery.carrier &&
-      Math.abs(quote.amount - delivery.amount) <= 1 &&
-      (!delivery.service || quote.service === delivery.service),
-  );
-
-  if (!match) return null;
-
-  return {
-    rateId: match.rateId,
-    carrier: match.carrierName,
-    service: match.service,
-    amount: match.amount,
-  };
-}
 
 /**
  * Builds the order meta for a fulfillment method.
