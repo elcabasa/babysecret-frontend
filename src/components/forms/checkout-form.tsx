@@ -528,68 +528,44 @@ export function CheckoutForm() {
         error={errors.country}
       />
 
-      {fulfillmentMethod === "delivery" ? (
-        <>
-          {isNigeria ? (
-            <FormSelectField
-              name="state"
-              label="State"
-              options={stateOptions}
-              value={watched.state ?? ""}
-              onChange={selectState}
-              error={errors.state}
-            />
-          ) : (
+      <>
+        {isNigeria ? (
+          <FormSelectField
+            name="state"
+            label="State"
+            options={stateOptions}
+            value={watched.state ?? ""}
+            onChange={selectState}
+            error={fulfillmentMethod === "delivery" ? errors.state : undefined}
+          />
+        ) : (
+          <FormField
+            name="state"
+            label="State"
+            register={register}
+            error={fulfillmentMethod === "delivery" ? errors.state : undefined}
+          />
+        )}
+
+        {fulfillmentMethod === "delivery" ? (
+          <>
             <FormField
-              name="state"
-              label="State"
+              name="city"
+              label="City / Town"
               register={register}
-              error={errors.state}
+              error={errors.city}
             />
-          )}
 
-          <FormField
-            name="city"
-            label="City / Town"
-            register={register}
-            error={errors.city}
-          />
-
-          {isNigeria ? (
-            <FormSelectField
-              name="lga"
-              label="LGA / Area (optional)"
-              hint="Your local area."
-              options={lgaOptions}
-              value={watched.lga ?? ""}
-              onChange={(value) => setValue("lga", value, { shouldValidate: false })}
+            <FormField
+              name="address"
+              label="Street address"
+              wide
+              register={register}
+              error={errors.address}
             />
-          ) : null}
-
-          <FormField
-            name="address"
-            label="Street address"
-            wide
-            register={register}
-            error={errors.address}
-          />
-
-          <FormField
-            name="apartment"
-            label="Apartment, landmark (optional)"
-            wide
-            register={register}
-            error={errors.apartment}
-          />
-
-          <FormField
-            name="zip"
-            label="Postal / ZIP code"
-            register={register}
-            error={errors.zip}
-          />
-        </>
-      ) : null}
+          </>
+        ) : null}
+      </>
 
       <FulfillmentMethodSelector state={qState} />
 
