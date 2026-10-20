@@ -487,7 +487,7 @@ export function CheckoutForm() {
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="glass-panel grid gap-5 rounded-2xl p-6 sm:grid-cols-2 sm:p-8"
+      className="glass-panel grid grid-cols-2 gap-3 rounded-2xl p-4 sm:gap-5 sm:p-8"
     >
       <FormField
         name="firstName"
@@ -516,7 +516,6 @@ export function CheckoutForm() {
         name="phone"
         label="Phone number"
         type="tel"
-        wide
         register={register}
         error={errors.phone}
       />
@@ -567,7 +566,7 @@ export function CheckoutForm() {
         ) : null}
       </>
 
-      <FulfillmentMethodSelector state={qState} />
+      <div className="col-span-2"><FulfillmentMethodSelector state={qState} /></div>
 
       {fulfillmentMethod === "delivery" ? (
         <>
@@ -577,7 +576,7 @@ export function CheckoutForm() {
         <PickupLocations />
       )}
 
-      <div className="sm:col-span-2">
+      <div className="col-span-2">
         <h3 className="text-sm font-semibold">Payment method</h3>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           {VISIBLE_PAYMENT_METHODS.map((option) => (
@@ -626,7 +625,7 @@ export function CheckoutForm() {
         </p>
       </div>
 
-      <label className="grid gap-2 text-sm sm:col-span-2" htmlFor="notes">
+      <label className="grid gap-2 text-sm col-span-2" htmlFor="notes">
         {fulfillmentMethod === "pickup"
           ? "Pickup notes (optional)"
           : "Delivery notes (optional)"}
@@ -640,14 +639,14 @@ export function CheckoutForm() {
       {cartIssues.length > 0 && <CartIssuesAlert issues={cartIssues} />}
 
       {submitError && (
-        <p className="text-sm text-red-700 sm:col-span-2" role="alert">
+        <p className="text-sm text-red-700 col-span-2" role="alert">
           {submitError}
         </p>
       )}
 
       <button
         disabled={submitting || !items.length}
-        className="rounded-full bg-[#005dbd] px-6 py-3 font-semibold text-white transition hover:bg-[#004a97] focus-visible:ring-2 focus-visible:ring-[#005dbd] focus-visible:ring-offset-2 active:bg-[#004a97] disabled:cursor-not-allowed disabled:bg-[#dbe7f3] disabled:text-[#334f6d] disabled:hover:bg-[#dbe7f3] sm:col-span-2 sm:justify-self-start"
+        className="rounded-full bg-[#005dbd] px-6 py-3 font-semibold text-white transition hover:bg-[#004a97] focus-visible:ring-2 focus-visible:ring-[#005dbd] focus-visible:ring-offset-2 active:bg-[#004a97] disabled:cursor-not-allowed disabled:bg-[#dbe7f3] disabled:text-[#334f6d] disabled:hover:bg-[#dbe7f3] col-span-2 sm:justify-self-start"
       >
         {submitting
           ? watched.paymentMethod === "bank_transfer"
@@ -658,7 +657,7 @@ export function CheckoutForm() {
           : "Continue to payment"}
       </button>
 
-      <p className="text-xs text-[#334f6d] sm:col-span-2">
+      <p className="text-xs text-[#334f6d] col-span-2">
         {watched.paymentMethod === "bank_transfer"
           ? "You will receive bank transfer details after placing your order."
           : "You will be redirected to complete your payment securely."}
