@@ -29,7 +29,7 @@ export function PickupLocations() {
   }
 
   return (
-    <div className="sm:col-span-2">
+    <div className="w-full min-w-0">
       <h3 className="text-sm font-semibold">
         Choose a pickup location
         <span aria-hidden="true" className="text-red-700">
