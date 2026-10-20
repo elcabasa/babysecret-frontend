@@ -1,7 +1,7 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { useCartStore } from "@/store/cart.store";
@@ -11,7 +11,6 @@ import type { CheckoutCustomer, FulfillmentMethod } from "@/types/order";
 import type { DeliveryQuote } from "@/types/shipping";
 import type { PickupLocationSummary } from "@/config/pickup";
 import { CartIssuesAlert } from "@/components/forms/cart-issues-alert";
-import { DeliveryAssistanceModal } from "@/components/forms/delivery-assistance-modal";
 import { DeliveryMethods } from "@/components/forms/delivery-methods";
 import { FulfillmentMethodSelector } from "@/components/forms/fulfillment-method-selector";
 import { PickupLocations } from "@/components/forms/pickup-locations";
@@ -231,11 +230,7 @@ export function CheckoutForm() {
   const qPhone = watched.phone ?? "";
   const qCountry = watched.country ?? "";
   const qState = watched.state ?? "";
-  const qCity = watched.city ?? "";
-  const qLga = watched.lga ?? "";
   const qAddress = watched.address ?? "";
-  const qApartment = watched.apartment ?? "";
-  const qZip = watched.zip ?? "";
 
   const addressComplete = useMemo(
     () =>
@@ -260,94 +255,6 @@ export function CheckoutForm() {
       qAddress,
     ],
   );
-
-  /*
-   * Stable cart signature: a quantity/product change alters parcel
-   * weight/items and must re-quote, but an unrelated render must not.
-   * The raw `items` array reference is never a dependency.
-   */
-  const cartSignature = useMemo(
-    () =>
-      items
-        .map(
-          (item) =>
-            `${item.productId}:${item.variantId ?? ""}x${item.quantity}`,
-        )
-        .join("|"),
-    [items],
-  );
-
-  /*
-   * Canonical city for the signature: when the picked/typed city matches a
-   * Terminal canonical city (case/punctuation-insensitive), the canonical
-   * spelling owns the key. "ojo" typed and "Ojo" picked are the same
-   * destination — one request, not two — and the key always carries the
-   * value Terminal actually quotes.
-   */
-  const canonicalCity = useMemo(() => {
-    const raw = qCity.trim();
-    if (!raw || !isNigeria) return raw;
-    const norm = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
-    return (
-      terminalCities.find(
-        (city) => city.toLowerCase().replace(/[^a-z0-9]/g, "") === norm,
-      ) ?? raw
-    );
-  }, [qCity, isNigeria, terminalCities]);
-
-  /*
-   * Stable quote-request key. The quote effect depends ONLY on this string
-   * (plus fulfillment method and completeness): identical inputs → identical
-   * key → no new request, no matter how often the component renders.
-   */
-  const quoteRequestKey = useMemo(() => {
-    if (fulfillmentMethod !== "delivery" || !addressComplete) return "";
-    return JSON.stringify([
-      fulfillmentMethod,
-      qCountry.trim(),
-      qState.trim(),
-      canonicalCity,
-      qLga.trim(),
-      qAddress.trim(),
-      qApartment.trim(),
-      qZip.trim(),
-      qFirstName.trim(),
-      qLastName.trim(),
-      qEmail.trim(),
-      qPhone.trim(),
-      cartSignature,
-    ]);
-  }, [
-    fulfillmentMethod,
-    addressComplete,
-    qCountry,
-    qState,
-    canonicalCity,
-    qLga,
-    qAddress,
-    qApartment,
-    qZip,
-    qFirstName,
-    qLastName,
-    qEmail,
-    qPhone,
-    cartSignature,
-  ]);
-
-  // Tracks the key already requested (or in flight) and the means to cancel
-  // it. Refs — never dependencies — so bookkeeping can't retrigger fetching.
-  const requestedQuoteKeyRef = useRef("");
-  const quoteAbortRef = useRef<AbortController | null>(null);
-  const quoteIdRef = useRef(0);
-
-  const selectedState = watched.state ?? "";
-
-  /*
-   * Load Terminal Africa's canonical delivery cities for the selected
-   * Nigerian state. Kept separate from the LGA dataset on purpose: mixing
-   * the two lists is what sent LGAs like "Eti-Osa" to Terminal as cities.
-   */
-
 
   const stateOptions = useMemo(
     () => locations.map((location) => location.state),
@@ -581,10 +488,6 @@ export function CheckoutForm() {
   const selectState = (value: string) => {
     setValue("state", value, { shouldValidate: true });
     if (value !== watched.state) {
-      // A new state means a new Terminal city list AND a new LGA list, so
-      // the previous selections (and their load error) are discarded here.
-      // The loading flag is armed here too; the fetch effect above only
-      // touches state inside its async callbacks.
       setValue("city", "", { shouldValidate: true });
       setValue("lga", "", { shouldValidate: false });
     }
