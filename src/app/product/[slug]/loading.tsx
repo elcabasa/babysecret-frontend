@@ -1,1 +1,14 @@
-export default function ProductLoading() { return <main className="min-h-screen bg-[#f9fcff] px-6 pb-20 pt-36 sm:px-10"><div className="mx-auto grid max-w-[1100px] gap-12 lg:grid-cols-2"><div className="min-h-[500px] animate-pulse rounded-2xl bg-white" /><div className="space-y-5 self-center"><div className="h-4 w-24 animate-pulse rounded bg-[#dbe8f7]" /><div className="h-14 w-3/4 animate-pulse rounded bg-[#dbe8f7]" /><div className="h-8 w-32 animate-pulse rounded bg-[#dbe8f7]" /></div></div></main>; }
+export default function ProductLoading() {
+  return (
+    <main className="min-h-screen bg-[#f9fcff] px-6 pb-20 pt-36 sm:px-10">
+      <div className="mx-auto grid max-w-[1100px] gap-12 lg:grid-cols-2">
+        <div className="min-h-[500px] animate-pulse rounded-2xl bg-white" />
+        <div className="space-y-5 self-center">
+          <div className="h-4 w-24 animate-pulse rounded bg-[#dbe8f7]" />
+          <div className="h-14 w-3/4 animate-pulse rounded bg-[#dbe8f7]" />
+          <div className="h-8 w-32 animate-pulse rounded bg-[#dbe8f7]" />
+        </div>
+      </div>
+    </main>
+  );
+}
